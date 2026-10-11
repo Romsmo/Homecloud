@@ -1,0 +1,11 @@
+# Nicht committen: enthaelt echte Passwoerter/Zugangsdaten
+.env
+*.env
+!*.env.example
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

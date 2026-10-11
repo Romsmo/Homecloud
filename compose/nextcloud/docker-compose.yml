@@ -1,0 +1,51 @@
+# Nextcloud + MariaDB
+# Vor dem Start: .env-Datei mit echten Werten anlegen (siehe .env.example in diesem Ordner)
+
+services:
+  db:
+    image: mariadb:11
+    container_name: nextcloud-db
+    restart: unless-stopped
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - nextcloud_db:/var/lib/mysql
+    networks:
+      - nextcloud-net
+
+  app:
+    image: nextcloud:latest
+    container_name: nextcloud-app
+    restart: unless-stopped
+    # Port 8080 wird NUR auf localhost gebunden - der Reverse Proxy (Kapitel 6,
+    # z.B. Nginx Proxy Manager) laeuft auf demselben Host und erreicht Nextcloud
+    # darueber. Nextcloud ist damit nicht direkt aus dem Internet erreichbar.
+    ports:
+      - "127.0.0.1:8080:80"
+    environment:
+      MYSQL_HOST: db
+      MYSQL_DATABASE: nextcloud
+      MYSQL_USER: nextcloud
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      NEXTCLOUD_ADMIN_USER: ${NEXTCLOUD_ADMIN_USER}
+      NEXTCLOUD_ADMIN_PASSWORD: ${NEXTCLOUD_ADMIN_PASSWORD}
+      NEXTCLOUD_TRUSTED_DOMAINS: ${NEXTCLOUD_TRUSTED_DOMAIN}
+    volumes:
+      - nextcloud_app:/var/www/html
+      # Nur der data/-Unterordner liegt auf dem separaten Storage-Laufwerk (siehe Kapitel 4):
+      - /mnt/nextcloud-data/data:/var/www/html/data
+    depends_on:
+      - db
+    networks:
+      - nextcloud-net
+
+volumes:
+  nextcloud_db:
+  nextcloud_app:
+
+networks:
+  nextcloud-net:

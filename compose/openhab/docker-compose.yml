@@ -1,0 +1,21 @@
+# openHAB (Alternative zu Home Assistant)
+
+services:
+  openhab:
+    image: openhab/openhab:latest
+    container_name: openhab
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      TZ: Europe/Berlin
+      USER_ID: "9001"
+      GROUP_ID: "9001"
+    volumes:
+      - openhab_addons:/openhab/addons
+      - openhab_conf:/openhab/conf
+      - openhab_userdata:/openhab/userdata
+
+volumes:
+  openhab_addons:
+  openhab_conf:
+  openhab_userdata:

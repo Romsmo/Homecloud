@@ -30,8 +30,9 @@ entsprechend sortiert.
 
 ## 1. HTTPS/TLS
 
-Bereits in [Kapitel 6](06-reverse-proxy-https.md) umgesetzt (Let's Encrypt über Nginx Proxy
-Manager bzw. Certbot). **Gemessen:** SSL-Labs-Bewertung **A+** (TLS 1.2/1.3, Perfect Forward
+Bereits in [Kapitel 6](06-reverse-proxy-https.md) umgesetzt (Let's Encrypt über den nativen
+Apache-Reverse-Proxy per Certbot; Nginx Proxy Manager steht dort als Docker-basierte, in der
+Arbeit nicht gemessene Alternative). **Gemessen:** SSL-Labs-Bewertung **A+** (TLS 1.2/1.3, Perfect Forward
 Secrecy, kein Heartbleed/POODLE/ROBOT) im gehärteten Zustand, gegenüber keiner TLS-Verschlüsselung
 im Ausgangszustand.
 
@@ -83,11 +84,15 @@ docker compose up -d
 docker exec -u www-data nextcloud-app php occ upgrade
 ```
 
-**Gemessen:** Ein Vergleich zweier unterschiedlich alter Nextcloud-Images in der Arbeit zeigt den
-Effekt sehr deutlich: Ein älteres Image (Debian-Basis 13.3) wies 1387 Schwachstellen mit hohem/
-kritischem Schweregrad auf, ein zum Testzeitpunkt aktuelles Image (Debian-Basis 13.7) nur 289.
-Kontinuierliches Update-Management ist damit keine Formsache, sondern eine der wirksamsten
-Einzelmaßnahmen.
+**Gemessen:** Die Arbeit vergleicht qualitativ (Abbildung 7) ein älteres gegen ein aktuelleres
+Nextcloud-Image und zeigt den Effekt des Update-Alters deutlich, ohne für das ältere Image eine
+exakte Schwachstellenzahl zu nennen. Konkret gemessen und beziffert wurde nur der aktuelle Stand
+(siehe Maßnahme 9: 289 Schwachstellen mit hohem/kritischem Schweregrad). Ein zusätzliches,
+konkretes Beispiel aus der Arbeit: Nach einem Image-Update stieg die im Response-Header
+offengelegte Apache-Version von 2.4.65 auf 2.4.68 – der Header blieb dabei weiterhin sichtbar
+(siehe Maßnahme 7). Kontinuierliches Update-Management ist damit keine Formsache, sondern eine der
+wirksamsten Einzelmaßnahmen, auch wenn sich der exakte quantitative Effekt hier nicht pauschal
+beziffern lässt.
 
 ## 5. Getestetes Backup
 
@@ -114,8 +119,23 @@ Ausgangszustand). Das zeigt: Portreduktion bedeutet hier vor allem "nur HTTP(S) 
 
 ## 7. Sicherheitsrelevante HTTP-Header
 
-In Nginx Proxy Manager unter *Proxy Hosts → (dein Host) → Edit → Advanced* ein Custom-Konfig-Snippet
-ergänzen (oder äquivalent in der Apache-Alternative aus Kapitel 6):
+Im nativen Apache aus Kapitel 6 in der vHost-Konfiguration ergänzen (siehe auch der
+auskommentierte Block in
+[`config-examples/apache-reverse-proxy-cloud.conf`](../config-examples/apache-reverse-proxy-cloud.conf)):
+
+```apache
+Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+Header always set X-Content-Type-Options "nosniff"
+Header always set X-Frame-Options "SAMEORIGIN"
+Header always set Referrer-Policy "no-referrer"
+Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+ServerTokens Prod
+ServerSignature Off
+```
+
+Falls du stattdessen die Docker-basierte NPM-Alternative aus Kapitel 6 verwendest, trägst du die
+entsprechenden `add_header`-Zeilen dort im Custom-Konfig-Snippet unter *Proxy Hosts → (dein Host)
+→ Edit → Advanced* ein:
 
 ```nginx
 add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
@@ -134,6 +154,12 @@ perfekte Bewertung, und das ist kein Zeichen eines gescheiterten Setups.
 > `X-Powered-By`-Header wieder, weil die Einstellung nicht dauerhaft außerhalb des Images
 > gespeichert war. Prüfe Header-Einstellungen nach jedem größeren Update erneut (z. B. mit `curl -I`
 > oder securityheaders.com).
+>
+> **Zweiter, eigenständiger Befund:** Unabhängig davon blieb der **Apache-Versions-Header**
+> (`Server: Apache/2.4.x`) sowohl vor als auch nach der Härtung sichtbar, trotz `ServerTokens
+> Prod`/`ServerSignature Off` – nach einem Image-Update zeigte er sogar die neue Versionsnummer
+> (2.4.65 → 2.4.68) an, statt verschwunden zu bleiben. Plane diesen Header als bekannte,
+> nicht vollständig behobene Einschränkung ein, getrennt vom `X-Powered-By`-Problem oben.
 
 ## 8. Brute-Force-Schutz
 
@@ -165,10 +191,12 @@ Für Container-Images zusätzlich Trivy einsetzen:
 trivy image nextcloud:latest
 ```
 
-**Gemessen:** Trivy fand im Ausgangszustand 317 Schwachstellen mit hohem/kritischem Schweregrad
-über die eingesetzten Images (312 HIGH, 5 CRITICAL) – überwiegend in mitgelieferten
-Betriebssystempaketen, nicht in der Anwendungslogik selbst. Das relativiert sich zwar durch
-Maßnahme 4 (Update-Management), verschwindet aber nicht vollständig.
+**Gemessen:** Trivy fand am Testsystem 289 Schwachstellen mit hohem/kritischem Schweregrad über
+die eingesetzten Images (285 HIGH, 4 CRITICAL) – überwiegend in mitgelieferten
+Betriebssystempaketen, nicht in der Anwendungslogik selbst. Ein separater Wert "nach" weiteren
+Maßnahmen wurde in der Arbeit nicht gemessen; der qualitative Alters-Effekt (älteres vs.
+aktuelleres Image) ist stattdessen über Abbildung 7 dokumentiert (siehe Maßnahme 4). Das relativiert
+sich zwar durch Maßnahme 4 (Update-Management), verschwindet aber nicht vollständig.
 
 ## 10. Container-/Serverhärtung nach CIS-Benchmark
 
@@ -178,10 +206,12 @@ docker run --rm --net host --pid host --userns host --cap-add audit_control \
   docker/docker-bench-security
 ```
 
-> **Ehrlicher Hinweis:** Diese Maßnahme wurde im Testsystem der Arbeit **bewusst nicht**
+> **Ehrlicher Hinweis:** Diese Maßnahme wurde im Testsystem der Arbeit **nicht vollständig**
 > umgesetzt (hoher Aufwand bei mittlerer Wirksamkeit, siehe Prioritätstabelle). Docker Bench for
-> Security bewertete das System mit einem Score von nur **3 von möglichen Punkten bei 117
-> Kontrollpunkten** – Nextcloud- und Datenbank-Container liefen weiterhin mit Root-Rechten, ohne
+> Security bewertete das System **vorher** (getestet auf einem Raspberry Pi) mit **5 von möglichen
+> Punkten bei 117 Kontrollpunkten** und **nachher** (getestet auf dem eigentlichen Testhost
+> „hcloud") mit nur noch **3 von 117** – der Score sank also sogar leicht, statt sich zu
+> verbessern. Nextcloud- und Datenbank-Container liefen weiterhin mit Root-Rechten, ohne
 > Ressourcenlimits, mit beschreibbarem Root-Dateisystem und ohne Healthcheck. Wenn du das
 > verbessern willst, sind sinnvolle erste Schritte:
 >
@@ -196,19 +226,39 @@ docker run --rm --net host --pid host --userns host --cap-add audit_control \
 
 ## 11. Verschlüsselung ruhender Daten und der Backups
 
-In der Arbeit als eigenständige, hochwirksame Maßnahme mit mittlerem Aufwand eingeordnet – aber
-mit einer wichtigen Einschränkung: Ist der Schlüssel zur automatischen Entsperrung auf demselben
-Host gespeichert (z. B. für automatische Reboots), ist die Wirksamkeit gegen einen Angreifer mit
-physischem Zugriff eingeschränkt. Mögliche Ansätze:
+In der Arbeit als eigenständige, hochwirksame Maßnahme mit mittlerem Aufwand eingeordnet – und im
+Testsystem auch tatsächlich **umgesetzt**: Storage- und Backup-Laufwerk waren per LUKS
+(`cryptsetup`) vollständig verschlüsselt (siehe Anhang 1/Tabelle 5 der Arbeit).
 
-- Full-Disk-Encryption des Storage- und Backup-Laufwerks mit LUKS (manuelle Entschlüsselung beim
-  Boot, höchste Wirksamkeit, aber kein automatischer Neustart ohne physischen Zugriff)
+> **Ehrliche Einschränkung aus der Arbeit:** Die Entsperrung der LUKS-Container erfolgte
+> **automatisch beim Systemstart** (damit der Dienst ohne manuelles Eingreifen nach einem Reboot
+> wieder verfügbar ist). Das bedeutet: Gegen den Diebstahl des **laufenden, eingeschalteten**
+> Systems (bzw. mit Zugriff auf den gespeicherten Schlüssel) bietet LUKS hier **keinen** Schutz –
+> wirksam ist es nur gegen den Diebstahl eines **ausgeschalteten** Datenträgers oder Geräts. Wäge
+> für dein eigenes System ab, ob dir automatischer Neustart ohne manuelle Eingabe wichtiger ist als
+> Schutz auch im eingeschalteten Zustand.
+
+So richtest du LUKS auf dem Storage- bzw. Backup-Laufwerk ein, bevor du es mountest und mit Daten
+befüllst (⚠️ verschlüsselt/formatiert das gesamte Zielgerät):
+
+```bash
+sudo cryptsetup luksFormat /dev/sdX1
+sudo cryptsetup open /dev/sdX1 nextcloud-storage
+sudo mkfs.ext4 /dev/mapper/nextcloud-storage
+```
+
+Für die automatische Entsperrung beim Boot (mit der oben genannten Einschränkung) trägst du das
+Gerät mit einer Keyfile in `/etc/crypttab` ein, statt die Passphrase interaktiv abzufragen.
+
+Weitere mögliche Ansätze, die in der Arbeit nicht zum Einsatz kamen, aber als Ergänzung
+sinnvoll sind:
+
+- Manuelle Passphrase-Eingabe beim Boot statt automatischer Keyfile-Entsperrung (höhere
+  Wirksamkeit gegen Diebstahl des laufenden Systems, aber kein automatischer Neustart ohne
+  physischen Zugriff)
 - Nextclouds serverseitige Verschlüsselung (`occ encryption:enable`) für ruhende Nutzdaten
-- Verschlüsselte Backup-Container (z. B. `rsync` auf ein LUKS-verschlüsseltes Backup-Laufwerk)
-
-Dieses Repository implementiert das nicht als Standardschritt, da die Abwägung
-Automatisierung/Komfort vs. Schutzwirkung stark vom Einsatzzweck abhängt – plane es als bewusste
-Erweiterung ein, wenn dein Bedrohungsmodell physischen Zugriff auf die Hardware einschließt.
+- Ein vom LUKS-Schlüssel getrennt verwaltetes Backup-Laufwerk (z. B. extern gelagert, nicht
+  dauerhaft eingebunden)
 
 ## 12. Phishing-resistente Verfahren (FIDO2/WebAuthn) statt reinem TOTP
 

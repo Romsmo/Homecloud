@@ -49,10 +49,12 @@ Danach `http://<LAN-IP-des-Hosts>:8080` aufrufen.
 
 ## 9.4 Nginx Proxy Manager
 
-Wird bereits für Nextcloud selbst als primärer Reverse Proxy verwendet (siehe
-[Kapitel 6](06-reverse-proxy-https.md)) und lässt sich über denselben Proxy-Host-Mechanismus auch
-vor diese optionalen Dienste schalten, falls du sie zusätzlich per eigener Subdomain und HTTPS
-erreichbar machen willst, statt sie nur im LAN zu nutzen:
+Für Nextcloud selbst wird in diesem Tutorial primär der **native Apache-Reverse-Proxy** verwendet
+(siehe [Kapitel 6](06-reverse-proxy-https.md)) – das ist der in der Arbeit tatsächlich gemessene
+Weg. Nginx Proxy Manager (NPM) ist hier als optionaler, Docker-basierter Alternativ-Proxy
+dokumentiert, der nicht Teil der in der Arbeit gemessenen Konfiguration ist. Du kannst ihn
+trotzdem zusätzlich einsetzen, etwa um diese optionalen Dienste per eigener Subdomain und HTTPS
+erreichbar zu machen, statt sie nur im LAN zu nutzen:
 
 ```bash
 cd compose/nginx-proxy-manager

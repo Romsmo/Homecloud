@@ -21,9 +21,10 @@ services:
     image: nextcloud:latest
     container_name: nextcloud-app
     restart: unless-stopped
-    # Port 8080 wird NUR auf localhost gebunden - der Reverse Proxy (Kapitel 6,
-    # z.B. Nginx Proxy Manager) laeuft auf demselben Host und erreicht Nextcloud
-    # darueber. Nextcloud ist damit nicht direkt aus dem Internet erreichbar.
+    # Port 8080 wird NUR auf localhost gebunden - der native Apache-Reverse-Proxy
+    # (Kapitel 6; Nginx Proxy Manager ist dort als Docker-basierte Alternative dokumentiert)
+    # laeuft auf demselben Host und erreicht Nextcloud darueber. Nextcloud ist damit nicht
+    # direkt aus dem Internet erreichbar.
     ports:
       - "127.0.0.1:8080:80"
     environment:

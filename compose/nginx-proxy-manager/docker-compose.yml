@@ -1,8 +1,9 @@
 # Nginx Proxy Manager (NPM)
-# Primaerer Reverse Proxy dieses Tutorials (siehe docs/06-reverse-proxy-https.md) - so war es
-# auch im in der Seminararbeit gemessenen Testsystem konfiguriert. Nur sinnvoll, wenn der Host
+# Optionale, Docker-basierte ALTERNATIVE zum primaeren, nativen Apache-Reverse-Proxy
+# (siehe docs/06-reverse-proxy-https.md) - NICHT die im Seminararbeit-Testsystem gemessene
+# Konfiguration (dort kam nativer Apache + Certbot zum Einsatz). Nur sinnvoll, wenn der Host
 # noch KEINEN anderen Webserver auf Port 80/443 betreibt; bei einem Portkonflikt ("address already
-# in use") siehe die Apache-Alternative in Kapitel 6.
+# in use") stattdessen den nativen Apache-Weg aus Kapitel 6 nutzen.
 
 services:
   npm:

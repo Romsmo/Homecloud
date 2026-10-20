@@ -16,7 +16,7 @@ Eine Sammlung von Fehlern, die während des Aufbaus des Referenzsystems tatsäch
 | Fehler | Ursache | Lösung |
 |---|---|---|
 | `error from registry: denied` beim Pull von `ghcr.io/home-assistant/home-assistant:stable` | Image unter dieser Registry nicht (mehr) verfügbar/zugänglich | Docker-Hub-Image `homeassistant/home-assistant:stable` verwenden |
-| Port 443 "address already in use" beim Start von Nginx Proxy Manager | Auf demselben Host läuft bereits Apache auf Port 443 | Entweder Apache als Reverse Proxy nutzen (Kapitel 6) statt NPM, oder NPM auf einem Host ohne bestehenden Webserver betreiben |
+| Port 443 "address already in use" beim Start von Nginx Proxy Manager | Auf demselben Host läuft bereits der native Apache-Reverse-Proxy (Kapitel 6) auf Port 443 | Entweder nur den nativen Apache als Reverse Proxy nutzen (Kapitel 6, primärer/gemessener Weg) statt NPM, oder NPM auf einem Host ohne bestehenden Webserver betreiben |
 
 ## Nextcloud-Konfiguration
 
@@ -48,5 +48,5 @@ Eine Sammlung von Fehlern, die während des Aufbaus des Referenzsystems tatsäch
 3. Bei `occ`-Problemen: interaktiv in den Container wechseln (`docker exec -it nextcloud-app bash`)
    statt Einzelbefehle "blind" abzusetzen
 4. Bei Problemen zwischen Reverse Proxy und Nextcloud: Erreichbarkeit direkt auf dem Host testen
-   mit `curl -v http://127.0.0.1:8080` (bzw. die LAN-IP des Docker-Hosts, falls du die
-   Apache-Alternative aus Kapitel 6 mit zwei Servern nutzt)
+   mit `curl -v http://127.0.0.1:8080` (Nextcloud läuft als Docker-Container auf demselben Host
+   wie der native Apache-Reverse-Proxy aus Kapitel 6, nur lokal gebunden)

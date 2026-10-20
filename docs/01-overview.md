@@ -13,32 +13,34 @@ getestet wurde. Es deckt ab:
   gemessenen Vorher-Nachher-Werte als Realitäts-Check
 - Optional: Home Assistant, openHAB, Portainer
 
-## Architektur: Ein Host, Docker-interner Reverse Proxy
+## Architektur: Ein Host, nativer Apache-Reverse-Proxy
 
-Anders als in einem früheren Entwurf dieses Tutorials beschrieben, läuft das in der Arbeit
-untersuchte System auf **einem einzigen Host** – kein zweiter, separater Apache-Server. Dieser
-eine Server:
+Das in der Arbeit untersuchte System läuft auf **einem einzigen Host** (laut Systemspezifikation
+der Arbeit: ein Laptop mit Debian 13 und Docker 29.2.1) – kein zweiter, separater Server. Dieser
+eine Host:
 
 - ist eine minimale, headless betriebene Debian-Installation
-- hostet alle Anwendungsdienste (Nextcloud, MariaDB, optional weitere) als Docker-Container
-- terminiert HTTPS selbst, über einen Docker-basierten Reverse Proxy (**Nginx Proxy Manager**)
-  mit Let's-Encrypt-Zertifikat
+- hostet die Anwendungsdienste (Nextcloud, MariaDB, optional weitere) als Docker-Container
+- terminiert HTTPS selbst, über einen **nativ auf dem Host installierten Apache** (nicht
+  containerisiert) mit `mod_proxy` und einem Let's-Encrypt-Zertifikat per Certbot – das ist der in
+  der Arbeit tatsächlich gemessene Weg (u. a. erkennbar am Apache-Versions-Header in den
+  Messungen aus Kapitel 4/8)
 - liegt in einem eigenen Netzsegment direkt am Internet-Router; das übrige Heimnetz hängt an
   einem zweiten Router mit eigener Firewall, sodass der Server nicht ungehindert ins Heimnetz
   vordringen kann (siehe Kapitel 8.8)
 
 ```
 Internet ──HTTPS(443)──▶ [ Ein Host, Debian + Docker ]
-                            ├─ Nginx Proxy Manager (Reverse Proxy + Let's Encrypt)
-                            ├─ Nextcloud + MariaDB
+                            ├─ Apache (nativ, Reverse Proxy + Let's Encrypt/Certbot)
+                            ├─ Nextcloud + MariaDB (Docker, nur auf 127.0.0.1:8080)
                             └─ optional: Home Assistant, openHAB, Portainer
 ```
 
-> **Hast du bereits einen separaten Server mit laufendem Apache, über den du den Zugriff leiten
-> willst** (z. B. weil du Nextcloud auf einem reinen Docker-Host ohne eigene Domain betreibst)?
-> Kapitel 6 enthält diese Variante weiterhin als dokumentierte Alternative. Der in der Arbeit
-> getestete und mit den Messwerten in Kapitel 8 belegte Weg ist aber der Docker-interne Reverse
-> Proxy auf demselben Host.
+> **Bevorzugst du einen Docker-basierten, UI-gestützten Reverse Proxy statt der nativen
+> Apache-Installation?** Kapitel 6 enthält **Nginx Proxy Manager (NPM)** als dokumentierte
+> Alternative. Diese Variante wurde für dieses Tutorial aufgebaut und getestet, ist aber **nicht**
+> die in der Seminararbeit selbst gemessene Konfiguration – die dort erhobenen Werte (Kapitel 8)
+> beziehen sich auf den nativen Apache-Weg.
 
 ## Speicherarchitektur
 
@@ -58,11 +60,14 @@ reproduzierbar, nicht nur auf einem dedizierten Server.
 ## Realitäts-Check: was die Arbeit tatsächlich gemessen hat
 
 Dieses Tutorial übernimmt nicht nur die Maßnahmen, sondern an den relevanten Stellen auch die
-**real gemessenen Ergebnisse** aus der finalen Fassung der Arbeit (Kapitel 4), damit du eine
-realistische Erwartungshaltung hast: TLS-Bewertung A+, Security-Header B→A (nicht F→A),
-Docker-Container laufen weiterhin mit Root-Rechten und ohne Ressourcenlimits (bewusst nicht
-behobenes Restrisiko), und das Backup erfüllt im Testsystem nicht die vollständige 3-2-1-Regel
-(keine räumlich getrennte Kopie). Details dazu in [Kapitel 8](08-security-hardening.md).
+**real gemessenen Ergebnisse** aus der Arbeit (Kapitel 4), damit du eine realistische
+Erwartungshaltung hast: TLS-Bewertung A+, Security-Header B→A (dabei bleibt der
+Apache-Versions-Header auch nach der Härtung sichtbar), Docker-Container laufen weiterhin mit
+Root-Rechten und ohne Ressourcenlimits (Docker-Bench-Score sank sogar von 5/117 auf 3/117), die
+Verschlüsselung ruhender Daten (LUKS) ist zwar eingerichtet, aber durch automatische Entsperrung
+beim Systemstart gegen Diebstahl des laufenden Systems nur eingeschränkt wirksam, und das Backup
+erfüllt im Testsystem nicht die vollständige 3-2-1-Regel (keine räumlich getrennte Kopie). Details
+dazu in [Kapitel 8](08-security-hardening.md).
 
 ## Inhaltsverzeichnis
 

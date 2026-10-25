@@ -1,4 +1,4 @@
-# 10. Troubleshooting / bekannte Fehler
+# 9. Troubleshooting / bekannte Fehler
 
 Eine Sammlung von Fehlern, die während des Aufbaus des Referenzsystems tatsächlich aufgetreten sind
 – inklusive Ursache und Lösung.
@@ -16,7 +16,6 @@ Eine Sammlung von Fehlern, die während des Aufbaus des Referenzsystems tatsäch
 | Fehler | Ursache | Lösung |
 |---|---|---|
 | `error from registry: denied` beim Pull von `ghcr.io/home-assistant/home-assistant:stable` | Image unter dieser Registry nicht (mehr) verfügbar/zugänglich | Docker-Hub-Image `homeassistant/home-assistant:stable` verwenden |
-| Port 443 "address already in use" beim Start von Nginx Proxy Manager | Auf demselben Host läuft bereits der native Apache-Reverse-Proxy (Kapitel 6) auf Port 443 | Entweder nur den nativen Apache als Reverse Proxy nutzen (Kapitel 6, primärer/gemessener Weg) statt NPM, oder NPM auf einem Host ohne bestehenden Webserver betreiben |
 
 ## Nextcloud-Konfiguration
 
@@ -26,13 +25,7 @@ Eine Sammlung von Fehlern, die während des Aufbaus des Referenzsystems tatsäch
 | `there are no commands defined in the config:system namespace` | `occ`-Befehl per `docker exec -u www-data ... occ ...` direkt aufgerufen, ohne vorheriges `su` + `cd` | Erst `docker exec -it nextcloud-app bash`, dann `su -s /bin/bash www-data`, dann `cd /var/www/html`, erst dann `php occ ...` ausführen |
 | `nano: command not found` im Nextcloud-Container | `nano` ist im offiziellen Image nicht enthalten | `occ`-CLI-Befehle statt manuellem Editieren verwenden, oder Datei gezielt mit `docker cp` bearbeiten |
 | `Configuration was not read or initialized correctly, not overwriting ...` nach `docker cp` von `config.php` | Besitzrechte-Mismatch (root statt www-data) nach dem Kopieren | `config.php` nicht direkt per `docker cp` bearbeiten; stattdessen `occ`-Befehle nutzen |
-| Entfernter `X-Powered-By`-Header taucht nach einem Image-Update wieder auf | Härtungs-/Konfigurationsänderungen, die nicht dauerhaft außerhalb des Images gespeichert sind (z. B. nur zur Laufzeit im Container gesetzt), gehen bei `docker compose pull && up -d` verloren | Header-Konfiguration als Teil deiner persistenten Konfiguration (z. B. `occ`-Einstellungen oder Reverse-Proxy-Konfiguration, nicht im Container selbst) pflegen und nach jedem Update mit `curl -I` erneut prüfen |
-
-## HTTPS / Browser
-
-| Fehler | Ursache | Lösung |
-|---|---|---|
-| "Kein Verbindungsversuch unternommen: Mögliches Sicherheitsproblem" beim Aufruf über HTTP | Der Browser hat für die Domain bereits einen HSTS-Eintrag gespeichert und verweigert jeden HTTP-Fallback | Gültiges Let's-Encrypt-Zertifikat einrichten (Kapitel 6.4) und die Seite ausschließlich über `https://` aufrufen |
+| Entfernter `X-Powered-By`-Header taucht nach einem Image-Update wieder auf | Härtungs-/Konfigurationsänderungen, die nicht dauerhaft außerhalb des Images gespeichert sind (z. B. nur zur Laufzeit im Container gesetzt), gehen bei `docker compose pull && up -d` verloren | Header-Konfiguration als Teil deiner persistenten Konfiguration pflegen (z. B. `occ`-Einstellungen oder, falls vorhanden, deiner eigenen Reverse-Proxy-Konfiguration) und nach jedem Update mit `curl -I` erneut prüfen |
 
 ## Backup / Cron
 
@@ -47,6 +40,8 @@ Eine Sammlung von Fehlern, die während des Aufbaus des Referenzsystems tatsäch
 2. Container-Status prüfen: `docker compose ps`
 3. Bei `occ`-Problemen: interaktiv in den Container wechseln (`docker exec -it nextcloud-app bash`)
    statt Einzelbefehle "blind" abzusetzen
-4. Bei Problemen zwischen Reverse Proxy und Nextcloud: Erreichbarkeit direkt auf dem Host testen
-   mit `curl -v http://127.0.0.1:8080` (Nextcloud läuft als Docker-Container auf demselben Host
-   wie der native Apache-Reverse-Proxy aus Kapitel 6, nur lokal gebunden)
+4. Bei Problemen mit der Erreichbarkeit von Nextcloud: Erreichbarkeit direkt auf dem Host testen
+   mit `curl -v http://127.0.0.1:8080` (Nextcloud läuft als Docker-Container auf dem Host und ist
+   dort unter Port 8080 erreichbar, siehe Kapitel 5) und anschließend von einem anderen Gerät im
+   LAN mit `curl -v http://<LAN-IP-des-Hosts>:8080`, um einen Firewall- oder Netzwerkfehler von
+   einem Container-Problem zu unterscheiden

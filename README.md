@@ -10,30 +10,36 @@ Backup-/Restore-Skripten.
 
 ## Architekturüberblick
 
-Das in der Seminararbeit (finale Fassung) untersuchte und gemessene System läuft auf **einem
-einzigen Host**:
+Dieses Tutorial baut die Anwendungsebene des in der Seminararbeit untersuchten Systems nach und
+läuft auf **einem einzigen Host**:
 
 - Minimale, headless betriebene Debian-Installation (laut Systemspezifikation der Arbeit: ein
   Laptop mit Debian 13 und Docker 29.2.1)
 - Alle Anwendungsdienste als Docker-Container: Nextcloud + MariaDB, optional Home Assistant,
   openHAB, Portainer
-- HTTPS wird direkt auf diesem Host terminiert, über einen **nativ installierten Apache**
-  (nicht containerisiert, `mod_proxy`) mit Let's-Encrypt-Zertifikat per Certbot – das ist der in
-  der Arbeit tatsächlich gemessene Weg
+- Zugriff ausschließlich **im LAN**, direkt über den vom jeweiligen Dienst verwendeten Port
+  (z. B. `http://<LAN-IP-des-Hosts>:8080` für Nextcloud) – dieses Tutorial richtet **keinen
+  Reverse Proxy und keine HTTPS-Terminierung** ein
 - Der Host liegt in einem eigenen Netzsegment direkt am Internet-Router; das übrige Heimnetz
-  hängt an einem zweiten Router mit eigener Firewall (siehe Kapitel 8.8) – dadurch bleibt ein
+  hängt an einem zweiten Router mit eigener Firewall (siehe Kapitel 7.13) – dadurch bleibt ein
   kompromittierter Server vom restlichen Heimnetz isoliert, ohne dass du dafür ein VLAN brauchst
 
 ```
-Internet ──HTTPS(443)──▶ [ Ein Host, Debian + Docker ]
-                            ├─ Apache (nativ, Reverse Proxy + Let's Encrypt/Certbot)
-                            ├─ Nextcloud + MariaDB (Docker, nur auf 127.0.0.1:8080)
-                            └─ optional: Home Assistant, openHAB, Portainer
+LAN ──HTTP (8080 u. a.)──▶ [ Ein Host, Debian + Docker ]
+                              ├─ Nextcloud + MariaDB (Docker)
+                              └─ optional: Home Assistant, openHAB, Portainer
 ```
 
-*(Eine Docker-basierte Alternative mit Nginx Proxy Manager auf demselben Host ist in Kapitel 6
-dokumentiert, falls du einen UI-gestützten Reverse Proxy bevorzugst – das ist aber nicht die in
-der Arbeit gemessene Konfiguration.)*
+> **Hinweis zur Seminararbeit:** Das am Testsystem der Arbeit tatsächlich gemessene System
+> terminierte HTTPS zusätzlich über einen nativ installierten Apache-Reverse-Proxy mit
+> Let's-Encrypt-Zertifikat, um von außerhalb des LAN erreichbar zu sein. Diese Reverse-Proxy-/
+> HTTPS-Schicht ist **nicht Teil dieses Tutorials** und wird hier bewusst nicht reproduziert.
+> Die in Kapitel 7 zitierten TLS- und Security-Header-Messwerte beziehen sich auf das
+> externe, so konfigurierte Testsystem der Arbeit, nicht auf das in diesem Repository
+> aufgebaute, LAN-interne Setup. Möchtest du denselben öffentlichen, HTTPS-gesicherten Zugriff
+> wie im Testsystem der Arbeit, musst du selbst einen Reverse Proxy mit TLS-Terminierung
+> vorschalten – das ist mit jedem gängigen Reverse Proxy (z. B. Apache, nginx, Caddy, Traefik)
+> möglich, aber bewusst nicht Teil dieser Anleitung.
 
 Speicherarchitektur: **drei getrennte physische Laufwerke** (bewusst kein RAID – Wiederherstellbarkeit
 hat Vorrang vor Verfügbarkeit):
@@ -48,11 +54,11 @@ hat Vorrang vor Verfügbarkeit):
 
 Dieses Tutorial übernimmt an den relevanten Stellen die real in der Arbeit gemessenen
 Vorher-Nachher-Werte (TLS-Bewertung, Security-Header-Note, Docker-Bench-Score, Trivy-Funde,
-Restore-Dauer), statt pauschal zu behaupten, jede Maßnahme sei perfekt umgesetzt. Details und
-offene Restrisiken (z. B. Container laufen weiterhin mit Root-Rechten und der Docker-Bench-Score
-sank sogar von 5/117 auf 3/117, die LUKS-Verschlüsselung entsperrt automatisch beim Boot, kein
-vollständiges 3-2-1-Backup, Apache-Versions-Header bleibt sichtbar) stehen in
-[Kapitel 8](docs/08-security-hardening.md).
+Restore-Dauer) des Testsystems der Arbeit, statt pauschal zu behaupten, jede Maßnahme sei perfekt
+umgesetzt. Details und offene Restrisiken (z. B. Container laufen weiterhin mit Root-Rechten und
+der Docker-Bench-Score sank sogar von 5/117 auf 3/117, die LUKS-Verschlüsselung entsperrt
+automatisch beim Boot, kein vollständiges 3-2-1-Backup) stehen in
+[Kapitel 7](docs/07-security-hardening.md).
 
 ## Inhaltsverzeichnis
 
@@ -61,18 +67,17 @@ vollständiges 3-2-1-Backup, Apache-Versions-Header bleibt sichtbar) stehen in
 3. [Docker-Installation](docs/03-docker-install.md)
 4. [Speicher-Setup (3-Laufwerk-Architektur)](docs/04-storage-setup.md)
 5. [Nextcloud + MariaDB Setup](docs/05-nextcloud-setup.md)
-6. [Reverse Proxy & HTTPS](docs/06-reverse-proxy-https.md)
-7. [Backup & Restore](docs/07-backup-restore.md)
-8. [Security-Härtung](docs/08-security-hardening.md)
-9. [Optionale Dienste (Home Assistant, openHAB, Portainer)](docs/09-optional-services.md)
-10. [Troubleshooting / bekannte Fehler](docs/10-troubleshooting.md)
+6. [Backup & Restore](docs/06-backup-restore.md)
+7. [Security-Härtung](docs/07-security-hardening.md)
+8. [Optionale Dienste (Home Assistant, openHAB, Portainer)](docs/08-optional-services.md)
+9. [Troubleshooting / bekannte Fehler](docs/09-troubleshooting.md)
 
 ## Wichtiger Hinweis zu Platzhaltern
 
-Alle IP-Adressen, Domains, Benutzernamen und Passwörter in diesem Repository sind **Platzhalter**.
+Alle IP-Adressen, Benutzernamen und Passwörter in diesem Repository sind **Platzhalter**.
 Ersetze sie durch eigene, sichere Werte. Verwende niemals einfache oder in Tutorials sichtbare
 Passwörter für produktive Systeme. Empfehlung: Passwort-Manager + generiertes Passwort (≥20
-Zeichen) + 2FA (siehe Kapitel 8).
+Zeichen) + 2FA (siehe Kapitel 7).
 
 ## Lizenz
 

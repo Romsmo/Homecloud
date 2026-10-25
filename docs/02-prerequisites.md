@@ -11,27 +11,28 @@
 ## Software / Zugänge
 
 - Debian 13 (oder vergleichbar aktuelles Debian/Ubuntu), Root- bzw. sudo-Zugriff
-- Eine Domain, bei der du eine Subdomain (z. B. `cloud.deine-domain.de`) per DNS-A-Record auf
-  deine öffentliche IP zeigen lassen kannst
 - SSH-Zugang zum Host
 - Grundkenntnisse: Linux-Kommandozeile, `systemd`, einfache YAML-Syntax
 
 ## Netzwerk
 
-- Der Host muss aus dem Internet auf Port 80/443 erreichbar sein (Portweiterleitung am Router,
-  für Let's-Encrypt-Validierung und HTTPS)
+- Dieses Tutorial macht die Dienste ausschließlich **im LAN** erreichbar – es ist keine
+  Portweiterleitung am Router und keine öffentliche Domain nötig
 - Empfehlung: der Host bekommt eine feste (statische) IP im LAN, z. B. per DHCP-Reservierung im
-  Router
-- Empfohlene Netzarchitektur (siehe Kapitel 8.8): der Host hängt in einem eigenen Netzsegment
+  Router – das hält `trusted_domains` (Kapitel 5.5) und die Firewall-Regeln (Kapitel 7) stabil
+- Empfohlene Netzarchitektur (siehe Kapitel 7.13): der Host hängt in einem eigenen Netzsegment
   direkt am Internet-Router; das übrige Heimnetz hängt an einem zweiten Router mit eigener
   Firewall. Das trennt den Server im Kompromittierungsfall wirksam vom restlichen Heimnetz, ohne
-  dass du dafür ein eigenes VLAN einrichten musst.
+  dass du dafür ein eigenes VLAN einrichten musst
+- Möchtest du zusätzlich von außerhalb des LAN per HTTPS zugreifen (wie im Testsystem der
+  zugrunde liegenden Arbeit), benötigst du dafür einen eigenen Reverse Proxy mit
+  TLS-Zertifikat sowie eine Domain mit DNS-A-Record und eine Portweiterleitung für 80/443 –
+  das ist bewusst **nicht** Teil dieses Tutorials (siehe Kapitel 1)
 
 ## Namenskonventionen in diesem Tutorial (Platzhalter)
 
 | Platzhalter | Bedeutung | Beispiel |
 |---|---|---|
-| `cloud.example.com` | öffentliche Subdomain für Nextcloud | `cloud.deine-domain.de` |
 | `192.168.1.20` | LAN-IP des Hosts | passe an dein Netz an |
 | `admin` / `CHANGE_ME_STRONG_PASSWORD` | Nextcloud-Admin-Zugangsdaten | durch echte, starke Werte ersetzen |
 | `/mnt/nextcloud-data` | Mountpoint Storage-Laufwerk | siehe Kapitel 4 |

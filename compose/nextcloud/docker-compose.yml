@@ -21,12 +21,13 @@ services:
     image: nextcloud:latest
     container_name: nextcloud-app
     restart: unless-stopped
-    # Port 8080 wird NUR auf localhost gebunden - der native Apache-Reverse-Proxy
-    # (Kapitel 6; Nginx Proxy Manager ist dort als Docker-basierte Alternative dokumentiert)
-    # laeuft auf demselben Host und erreicht Nextcloud darueber. Nextcloud ist damit nicht
-    # direkt aus dem Internet erreichbar.
+    # Port 8080 ist auf allen Interfaces gebunden, damit Nextcloud direkt per LAN-IP
+    # erreichbar ist (siehe Kapitel 5). Dieses Tutorial richtet keinen Reverse Proxy ein;
+    # der Zugriff erfolgt ausschliesslich im LAN, abgesichert per Firewall (Kapitel 7,
+    # Massnahme 6). Willst du zusaetzlich von aussen per HTTPS zugreifen, musst du selbst
+    # einen Reverse Proxy mit TLS-Terminierung vorschalten (nicht Teil dieses Tutorials).
     ports:
-      - "127.0.0.1:8080:80"
+      - "8080:80"
     environment:
       MYSQL_HOST: db
       MYSQL_DATABASE: nextcloud

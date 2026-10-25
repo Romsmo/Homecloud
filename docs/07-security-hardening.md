@@ -1,11 +1,13 @@
-# 8. Security-Härtung
+# 7. Security-Härtung
 
 Dieses Kapitel setzt die in der Seminararbeit (Kapitel 3, "Erforderliche Sicherheitsmaßnahmen")
 hergeleiteten Maßnahmen um – in der **Prioritätsreihenfolge**, die die finale Fassung der Arbeit
 in Kapitel 5.2 aus dem Verhältnis von Schutzwirkung zu Aufwand ableitet. Zu jeder Maßnahme sind,
 soweit verfügbar, die **real am Testsystem gemessenen Vorher-/Nachher-Werte** aus Kapitel 4
 angegeben – als realistischer Maßstab, nicht als Garantie, dass dein eigenes System exakt
-dieselben Werte erreicht.
+dieselben Werte erreicht. Maßnahme 1 und 7 beziehen sich dabei, wie dort vermerkt, auf die
+HTTPS-/Reverse-Proxy-Schicht des Testsystems der Arbeit, die **nicht** Teil dieses Tutorials ist
+(siehe Kapitel 1).
 
 | # | Maßnahme | Schutzziel | Wirksamkeit | Aufwand |
 |---|---|---|---|---|
@@ -30,11 +32,15 @@ entsprechend sortiert.
 
 ## 1. HTTPS/TLS
 
-Bereits in [Kapitel 6](06-reverse-proxy-https.md) umgesetzt (Let's Encrypt über den nativen
-Apache-Reverse-Proxy per Certbot; Nginx Proxy Manager steht dort als Docker-basierte, in der
-Arbeit nicht gemessene Alternative). **Gemessen:** SSL-Labs-Bewertung **A+** (TLS 1.2/1.3, Perfect Forward
-Secrecy, kein Heartbleed/POODLE/ROBOT) im gehärteten Zustand, gegenüber keiner TLS-Verschlüsselung
-im Ausgangszustand.
+**Nicht Teil dieses Tutorials.** Im Testsystem der zugrunde liegenden Arbeit wurde HTTPS über
+einen nativ installierten Apache-Reverse-Proxy mit Let's-Encrypt-Zertifikat per Certbot
+terminiert (siehe Kapitel 1). Dieses Tutorial macht Nextcloud stattdessen ausschließlich im LAN
+per HTTP erreichbar und richtet keinen Reverse Proxy ein. Möchtest du HTTPS-Schutz, musst du
+selbst einen Reverse Proxy (z. B. Apache, nginx, Caddy oder Traefik) mit TLS-Zertifikat
+vorschalten – die konkrete Einrichtung hängt vom gewählten Produkt ab und ist hier bewusst nicht
+dokumentiert. **Gemessen (Testsystem der Arbeit, mit Reverse Proxy):** SSL-Labs-Bewertung **A+**
+(TLS 1.2/1.3, Perfect Forward Secrecy, kein Heartbleed/POODLE/ROBOT) im gehärteten Zustand,
+gegenüber keiner TLS-Verschlüsselung im Ausgangszustand.
 
 ## 2. Zwei-Faktor-Authentifizierung (2FA)
 
@@ -88,15 +94,16 @@ docker exec -u www-data nextcloud-app php occ upgrade
 Nextcloud-Image und zeigt den Effekt des Update-Alters deutlich, ohne für das ältere Image eine
 exakte Schwachstellenzahl zu nennen. Konkret gemessen und beziffert wurde nur der aktuelle Stand
 (siehe Maßnahme 9: 289 Schwachstellen mit hohem/kritischem Schweregrad). Ein zusätzliches,
-konkretes Beispiel aus der Arbeit: Nach einem Image-Update stieg die im Response-Header
-offengelegte Apache-Version von 2.4.65 auf 2.4.68 – der Header blieb dabei weiterhin sichtbar
-(siehe Maßnahme 7). Kontinuierliches Update-Management ist damit keine Formsache, sondern eine der
-wirksamsten Einzelmaßnahmen, auch wenn sich der exakte quantitative Effekt hier nicht pauschal
-beziffern lässt.
+konkretes Beispiel aus der Arbeit (am dortigen, per Apache-Reverse-Proxy terminierten
+Testsystem): Nach einem Image-Update stieg die im Response-Header offengelegte Apache-Version
+von 2.4.65 auf 2.4.68 – der Header blieb dabei weiterhin sichtbar (siehe Maßnahme 7).
+Kontinuierliches Update-Management ist damit keine Formsache, sondern eine der wirksamsten
+Einzelmaßnahmen, auch wenn sich der exakte quantitative Effekt hier nicht pauschal beziffern
+lässt.
 
 ## 5. Getestetes Backup
 
-Siehe [Kapitel 7](07-backup-restore.md) für die Skripte. **Gemessen:** Ein Testlauf des
+Siehe [Kapitel 6](06-backup-restore.md) für die Skripte. **Gemessen:** Ein Testlauf des
 Restore-Skripts zeigte eine Wiederherstellungszeit von rund drei Minuten bis zur nutzbaren
 Nextcloud-Instanz (die tatsächliche Dauer skaliert mit der Datenmenge).
 
@@ -111,17 +118,22 @@ Nextcloud-Instanz (die tatsächliche Dauer skaliert mit der Datenmenge).
 sudo bash scripts/firewall-setup.sh
 ```
 
-Passe `LAN_SUBNET` und `SSH_PORT` im Skript vor der Ausführung an deine Umgebung an. **Gemessen:**
-Ein externer Portscan (`nmap -p- --min-rate 2000`) fand im gehärteten Zustand genau zwei dem
-System zuzuordnende offene Ports: 80/TCP und 443/TCP (gegenüber nur 80/TCP, unverschlüsselt, im
-Ausgangszustand). Das zeigt: Portreduktion bedeutet hier vor allem "nur HTTP(S) nach außen", nicht
-"möglichst viele Ports schließen" – HTTP(S) muss offen bleiben, damit der Dienst erreichbar ist.
+Passe `LAN_SUBNET` und `SSH_PORT` im Skript vor der Ausführung an deine Umgebung an. Das Skript
+lässt eingehenden Zugriff auf den Nextcloud-Port (8080) bewusst nur aus dem LAN zu – dieses
+Tutorial exponiert, anders als das Testsystem der Arbeit, keinen Port öffentlich ins Internet
+(kein Port 80/443, da kein Reverse Proxy eingerichtet wird, siehe Kapitel 1). **Gemessen (am
+öffentlich per Reverse Proxy erreichbaren Testsystem der Arbeit):** Ein externer Portscan
+(`nmap -p- --min-rate 2000`) fand im gehärteten Zustand genau zwei dem System zuzuordnende offene
+Ports: 80/TCP und 443/TCP (gegenüber nur 80/TCP, unverschlüsselt, im Ausgangszustand). Das zeigt:
+Portreduktion bedeutet dort vor allem "nur HTTP(S) nach außen", nicht "möglichst viele Ports
+schließen" – sobald du selbst einen Reverse Proxy ergänzt, gilt dieselbe Überlegung auch für dein
+System.
 
 ## 7. Sicherheitsrelevante HTTP-Header
 
-Im nativen Apache aus Kapitel 6 in der vHost-Konfiguration ergänzen (siehe auch der
-auskommentierte Block in
-[`config-examples/apache-reverse-proxy-cloud.conf`](../config-examples/apache-reverse-proxy-cloud.conf)):
+**Nicht Teil dieses Tutorials**, da hierfür ein Reverse Proxy nötig ist, den dieses Tutorial
+bewusst nicht einrichtet (siehe Kapitel 1 und Maßnahme 1). Im Testsystem der Arbeit wurden die
+folgenden Header in der vHost-Konfiguration des nativen Apache-Reverse-Proxys gesetzt:
 
 ```apache
 Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
@@ -133,22 +145,15 @@ ServerTokens Prod
 ServerSignature Off
 ```
 
-Falls du stattdessen die Docker-basierte NPM-Alternative aus Kapitel 6 verwendest, trägst du die
-entsprechenden `add_header`-Zeilen dort im Custom-Konfig-Snippet unter *Proxy Hosts → (dein Host)
-→ Edit → Advanced* ein:
+Setzt du selbst einen Reverse Proxy vor dieses Tutorial-Setup, ergänze die entsprechenden
+Header-Direktiven dort (bei Apache wie oben, bei nginx z. B. über `add_header ... always;`,
+bei Caddy/Traefik über die jeweilige Header-Middleware).
 
-```nginx
-add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-add_header X-Content-Type-Options "nosniff" always;
-add_header X-Frame-Options "SAMEORIGIN" always;
-add_header Referrer-Policy "no-referrer" always;
-add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
-```
-
-**Gemessen:** securityheaders.com bewertete den Ausgangszustand mit **B** und den gehärteten
-Zustand mit **A**. Auch nach der Härtung fehlte in der Arbeit weiterhin ausschließlich der
-Permissions-Policy-Header vollständig – realistischerweise bekommst du nicht ohne Weiteres eine
-perfekte Bewertung, und das ist kein Zeichen eines gescheiterten Setups.
+**Gemessen (Testsystem der Arbeit, mit Reverse Proxy):** securityheaders.com bewertete den
+Ausgangszustand mit **B** und den gehärteten Zustand mit **A**. Auch nach der Härtung fehlte in
+der Arbeit weiterhin ausschließlich der Permissions-Policy-Header vollständig –
+realistischerweise bekommst du nicht ohne Weiteres eine perfekte Bewertung, und das ist kein
+Zeichen eines gescheiterten Setups.
 
 > **Hinweis aus der Arbeit:** Nach einem Image-Update verschwand ein zuvor entfernter
 > `X-Powered-By`-Header wieder, weil die Einstellung nicht dauerhaft außerhalb des Images

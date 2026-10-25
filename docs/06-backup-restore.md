@@ -1,11 +1,11 @@
-# 7. Backup & Restore
+# 6. Backup & Restore
 
 Backup und Restore arbeiten ausschließlich auf dem in Kapitel 4 eingerichteten Daten- bzw.
 Backup-Laufwerk (`/mnt/nextcloud-data/data` → `/mnt/nextcloud-backup/nextcloud-data-backup`).
 Beide Skripte wrappen den eigentlichen `rsync`-Vorgang in Nextclouds Wartungsmodus, damit während
 des Kopiervorgangs keine Datei-Inkonsistenzen durch gleichzeitige Schreibzugriffe entstehen.
 
-## 7.1 Voraussetzung: `rsync` installieren
+## 6.1 Voraussetzung: `rsync` installieren
 
 ```bash
 sudo apt install -y rsync
@@ -13,7 +13,7 @@ sudo apt install -y rsync
 
 (auf dem Host, **nicht** im Container – rsync arbeitet direkt auf den gemounteten Verzeichnissen)
 
-## 7.2 Backup-Skript
+## 6.2 Backup-Skript
 
 Datei: [`scripts/backup-nextcloud-data.sh`](../scripts/backup-nextcloud-data.sh)
 
@@ -33,7 +33,7 @@ sudo /root/backup-nextcloud-data.sh
 cat /var/log/nextcloud-backup.log
 ```
 
-## 7.3 Automatisierung per Cron
+## 6.3 Automatisierung per Cron
 
 ```bash
 sudo crontab -e
@@ -52,7 +52,7 @@ sudo systemctl status cron
 sudo systemctl enable --now cron   # falls nicht aktiv
 ```
 
-## 7.4 Restore-Skript
+## 6.4 Restore-Skript
 
 Datei: [`scripts/restore-nextcloud-data.sh`](../scripts/restore-nextcloud-data.sh)
 
@@ -92,7 +92,7 @@ sudo /root/restore-nextcloud-data.sh
 > anschließt, oder einen verschlüsselten Cloud-Backup-Zielort. Ohne räumliche Trennung schützt
 > dich dieses Backup nicht gegen Diebstahl, Brand oder Wasserschaden am Serverstandort.
 
-## 7.5 Restore testen (empfohlen)
+## 6.5 Restore testen (empfohlen)
 
 Ein einfacher End-to-End-Test des gesamten Backup/Restore-Zyklus:
 
@@ -112,4 +112,4 @@ Ein einfacher End-to-End-Test des gesamten Backup/Restore-Zyklus:
     Skript `PATH=...` ganz oben selbst und ruft `docker`/`rsync` über ihre vollen Pfade
     (`/usr/bin/docker`, `/usr/bin/rsync`) auf.
 - **`rsync: command not found`**: `rsync` fehlt auf dem Host → `sudo apt install rsync -y`
-  (siehe 7.1).
+  (siehe 6.1).

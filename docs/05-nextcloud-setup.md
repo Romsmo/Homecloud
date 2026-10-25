@@ -10,7 +10,7 @@ Stelle sicher, dass Kapitel 3 (Docker) und Kapitel 4 (Speicher-Setup, insbesonde
 ```bash
 cd compose/nextcloud
 cp .env.example .env
-nano .env   # echte, starke Passwörter und deine Domain eintragen
+nano .env   # echte, starke Passwörter und deine LAN-IP eintragen
 ```
 
 ## 5.3 Container starten
@@ -35,8 +35,9 @@ docker compose logs -f db
 ## 5.5 `trusted_domains` korrekt konfigurieren
 
 Die Umgebungsvariable `NEXTCLOUD_TRUSTED_DOMAINS` wird von Nextcloud **nur beim allerersten
-Containerstart** ausgewertet. Willst du später eine Domain hinzufügen oder ändern, funktioniert das
-nur über die `occ`-CLI – **nicht** durch bloßes Ändern der Compose-Datei und Neustarten.
+Containerstart** ausgewertet. Willst du später eine weitere Adresse hinzufügen oder ändern,
+funktioniert das nur über die `occ`-CLI – **nicht** durch bloßes Ändern der Compose-Datei und
+Neustarten.
 
 Vorgehen, das zuverlässig funktioniert (wichtig: `su` + `cd` **vor** dem `occ`-Aufruf, ein direktes
 `docker exec -u www-data ... occ ...` schlägt fehl mit
@@ -47,11 +48,14 @@ docker exec -it nextcloud-app bash
 su -s /bin/bash www-data
 cd /var/www/html
 php occ config:system:set trusted_domains 1 --value=192.168.1.20
-php occ config:system:set trusted_domains 2 --value=cloud.example.com
 php occ config:system:get trusted_domains
 exit
 exit
 ```
+
+> Setzt du später selbst einen eigenen Reverse Proxy mit eigener Domain davor (nicht Teil dieses
+> Tutorials, siehe Kapitel 1), ergänzt du diese Domain zusätzlich über einen weiteren
+> `trusted_domains`-Index (`trusted_domains 2`, `3`, …), statt die LAN-IP zu ersetzen.
 
 ## 5.6 Integritätsprüfung
 
@@ -63,7 +67,7 @@ docker exec -u www-data nextcloud-app php occ integrity:check-core
 ```
 
 Ein leeres Ergebnis bedeutet: keine Abweichungen gefunden. Details siehe
-[Kapitel 8 – Security-Härtung](08-security-hardening.md).
+[Kapitel 7 – Security-Härtung](07-security-hardening.md).
 
 ## 5.7 Nützliche `occ`-Befehle
 
@@ -80,7 +84,7 @@ docker exec -u www-data nextcloud-app php occ maintenance:mode --off
 
 - `nano` ist im offiziellen Nextcloud-Image nicht vorinstalliert. Nutze stattdessen `occ`-Befehle
   oder editiere Dateien auf dem Host und kopiere sie gezielt (Vorsicht: Besitzrechte können dabei
-  brechen, siehe Kapitel 10).
+  brechen, siehe Kapitel 9).
 - Nach `docker cp` von `config.php` kann die Fehlermeldung *"Configuration was not read or
   initialized correctly, not overwriting..."* auftreten – Ursache ist ein Besitzrechte-Mismatch
   (root statt www-data). Vermeide das direkte Kopieren von `config.php`; nutze `occ`-Befehle.

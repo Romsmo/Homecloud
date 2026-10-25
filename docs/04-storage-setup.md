@@ -74,7 +74,7 @@ sudo chown -R 33:33 /mnt/nextcloud-data/data
 > Storage-Laufwerks eindeutig auf die Nutzdaten fokussiert.
 
 Dieser Pfad (`/mnt/nextcloud-data/data`) wird in Kapitel 5 (Nextcloud-Compose-Datei) und in
-Kapitel 7 (Backup-/Restore-Skripte) exakt so wiederverwendet.
+Kapitel 6 (Backup-/Restore-Skripte) exakt so wiederverwendet.
 
 ## 4.7 Backup-Zielverzeichnis vorbereiten
 

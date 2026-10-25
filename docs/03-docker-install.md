@@ -60,5 +60,5 @@ Danach aus- und wieder einloggen (oder `newgrp docker`), damit die Gruppenmitgli
 - Verwende **`docker compose`** (mit Leerzeichen, Compose-Plugin v2), nicht das alte,
   eigenständige `docker-compose` (Bindestrich, v1) – die YAML-Syntax und Fehlermeldungen können
   sich leicht unterscheiden.
-- Siehe [Kapitel 10 – Troubleshooting](10-troubleshooting.md) für häufige YAML-Fehler in
+- Siehe [Kapitel 9 – Troubleshooting](09-troubleshooting.md) für häufige YAML-Fehler in
   Compose-Dateien (`environment` falsch geschrieben, `volumes:` falsch eingerückt, etc.).

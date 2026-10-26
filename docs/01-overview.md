@@ -37,14 +37,21 @@ LAN ──HTTP (8080 u. a.)──▶ [ Ein Host, Debian + Docker ]
                               └─ optional: Home Assistant, openHAB, Portainer
 ```
 
-> **Abweichung von der Seminararbeit:** Das am Testsystem der Arbeit tatsächlich gemessene
-> System terminierte HTTPS zusätzlich über einen nativ installierten Apache (`mod_proxy`) mit
-> Let's-Encrypt-Zertifikat per Certbot, um von außerhalb des LAN sicher erreichbar zu sein (u. a.
-> erkennbar am Apache-Versions-Header in den Messungen aus Kapitel 4). Dieses Tutorial
-> reproduziert diese Reverse-Proxy-/HTTPS-Schicht bewusst **nicht** – der Zugriff erfolgt hier
-> ausschließlich im LAN, abgesichert per Firewall (Kapitel 7, Maßnahme 6). Die in Kapitel 7
-> zitierten TLS- und Security-Header-Messwerte sind reale Ergebnisse aus der Arbeit und beziehen
-> sich auf deren extern per Reverse Proxy abgesichertes Testsystem, nicht auf das hier
+> **Abweichung von der Seminararbeit:** Das Testsystem der Arbeit bestand aus genau diesem einen
+> Host – zusätzlich lief dort **nativ auf demselben Host** (nicht als separater Server, nicht als
+> eigener Container) ein Apache-Reverse-Proxy. Der Router leitete Port 80/443 per
+> Portweiterleitung an diesen Host weiter; der native Apache-Proxy terminierte dort TLS und reichte
+> die Anfrage intern an den Nextcloud-Container weiter. Eingesetzt wurde der Proxy gezielt, weil
+> Nextcloud selbst keine automatisiert erneuerbaren, vertrauenswürdigen TLS-Zertifikate
+> bereitstellt: der Apache-Proxy holte dafür per Certbot ein Let's-Encrypt-Zertifikat und erneuerte
+> es automatisiert, terminierte TLS und setzte zusätzlich die in
+> [Kapitel 7, Maßnahme 7](07-security-hardening.md#7-sicherheitsrelevante-http-header) genannten
+> Security-Header in seiner vHost-Konfiguration – **nicht** in Nextcloud selbst (u. a. erkennbar am
+> Apache-Versions-Header in den Messungen aus Kapitel 4). Dieses Tutorial reproduziert diese
+> Reverse-Proxy-/HTTPS-Schicht bewusst **nicht** – der Zugriff erfolgt hier ausschließlich im LAN,
+> abgesichert per Firewall (Kapitel 7, Maßnahme 6). Die in Kapitel 7 zitierten TLS- und
+> Security-Header-Messwerte sind reale Ergebnisse aus der Arbeit und beziehen sich auf das über
+> diesen Reverse Proxy von außerhalb des LAN erreichbare Testsystem, nicht auf das hier
 > beschriebene LAN-interne Setup. Willst du denselben öffentlichen, HTTPS-gesicherten Zugriff,
 > musst du selbst einen Reverse Proxy mit TLS-Terminierung vorschalten (z. B. Apache, nginx,
 > Caddy oder Traefik) – das ist technisch möglich, aber bewusst nicht Teil dieser Anleitung.
@@ -70,8 +77,8 @@ Dieses Tutorial übernimmt nicht nur die Maßnahmen, sondern an den relevanten S
 **real gemessenen Ergebnisse** aus der Arbeit (Kapitel 4), damit du eine realistische
 Erwartungshaltung hast: TLS-Bewertung A+, Security-Header B→A (dabei blieb der
 Apache-Versions-Header auch nach der Härtung sichtbar) – beide Werte beziehen sich, wie oben
-beschrieben, auf das extern per Reverse Proxy abgesicherte Testsystem der Arbeit, nicht auf das
-LAN-interne Setup dieses Tutorials. Unabhängig davon gilt für beide Systeme gleichermaßen:
+beschrieben, auf das über den nativen Reverse Proxy von außerhalb des LAN erreichbare Testsystem
+der Arbeit, nicht auf das LAN-interne Setup dieses Tutorials. Unabhängig davon gilt für beide Systeme gleichermaßen:
 Docker-Container laufen weiterhin mit Root-Rechten und ohne Ressourcenlimits (Docker-Bench-Score
 sank sogar von 5/117 auf 3/117), die Verschlüsselung ruhender Daten (LUKS) ist zwar eingerichtet,
 aber durch automatische Entsperrung beim Systemstart gegen Diebstahl des laufenden Systems nur

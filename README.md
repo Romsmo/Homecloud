@@ -30,12 +30,18 @@ LAN ──HTTP (8080 u. a.)──▶ [ Ein Host, Debian + Docker ]
                               └─ optional: Home Assistant, openHAB, Portainer
 ```
 
-> **Hinweis zur Seminararbeit:** Das am Testsystem der Arbeit tatsächlich gemessene System
-> terminierte HTTPS zusätzlich über einen nativ installierten Apache-Reverse-Proxy mit
-> Let's-Encrypt-Zertifikat, um von außerhalb des LAN erreichbar zu sein. Diese Reverse-Proxy-/
-> HTTPS-Schicht ist **nicht Teil dieses Tutorials** und wird hier bewusst nicht reproduziert.
-> Die in Kapitel 7 zitierten TLS- und Security-Header-Messwerte beziehen sich auf das
-> externe, so konfigurierte Testsystem der Arbeit, nicht auf das in diesem Repository
+> **Hinweis zur Seminararbeit:** Das Testsystem der Arbeit bestand aus genau diesem einen Host –
+> zusätzlich lief dort **nativ auf demselben Host** (nicht als separater Server, nicht als eigener
+> Container) ein Apache-Reverse-Proxy. Der Router leitete Port 80/443 per Portweiterleitung an
+> diesen Host weiter; der native Apache-Proxy terminierte dort TLS und reichte die Anfrage intern
+> an den Nextcloud-Container weiter. Eingesetzt wurde der Proxy gezielt, weil Nextcloud selbst
+> keine automatisiert erneuerbaren, vertrauenswürdigen TLS-Zertifikate bereitstellt: der
+> Apache-Proxy holte dafür per Certbot ein Let's-Encrypt-Zertifikat und erneuerte es automatisiert,
+> terminierte TLS und setzte zusätzlich die in Kapitel 7 beschriebenen Security-Header in seiner
+> vHost-Konfiguration – **nicht** in Nextcloud selbst. Diese Reverse-Proxy-/HTTPS-Schicht ist
+> **nicht Teil dieses Tutorials** und wird hier bewusst nicht reproduziert. Die in Kapitel 7
+> zitierten TLS- und Security-Header-Messwerte beziehen sich auf das über diesen Reverse Proxy von
+> außerhalb des LAN erreichbare Testsystem der Arbeit, nicht auf das in diesem Repository
 > aufgebaute, LAN-interne Setup. Möchtest du denselben öffentlichen, HTTPS-gesicherten Zugriff
 > wie im Testsystem der Arbeit, musst du selbst einen Reverse Proxy mit TLS-Terminierung
 > vorschalten – das ist mit jedem gängigen Reverse Proxy (z. B. Apache, nginx, Caddy, Traefik)

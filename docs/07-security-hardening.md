@@ -32,15 +32,19 @@ entsprechend sortiert.
 
 ## 1. HTTPS/TLS
 
-**Nicht Teil dieses Tutorials.** Im Testsystem der zugrunde liegenden Arbeit wurde HTTPS über
-einen nativ installierten Apache-Reverse-Proxy mit Let's-Encrypt-Zertifikat per Certbot
-terminiert (siehe Kapitel 1). Dieses Tutorial macht Nextcloud stattdessen ausschließlich im LAN
-per HTTP erreichbar und richtet keinen Reverse Proxy ein. Möchtest du HTTPS-Schutz, musst du
-selbst einen Reverse Proxy (z. B. Apache, nginx, Caddy oder Traefik) mit TLS-Zertifikat
-vorschalten – die konkrete Einrichtung hängt vom gewählten Produkt ab und ist hier bewusst nicht
-dokumentiert. **Gemessen (Testsystem der Arbeit, mit Reverse Proxy):** SSL-Labs-Bewertung **A+**
-(TLS 1.2/1.3, Perfect Forward Secrecy, kein Heartbleed/POODLE/ROBOT) im gehärteten Zustand,
-gegenüber keiner TLS-Verschlüsselung im Ausgangszustand.
+**Nicht Teil dieses Tutorials.** Im Testsystem der zugrunde liegenden Arbeit lief auf demselben
+Host zusätzlich **nativ** (nicht als separater Server) ein Apache-Reverse-Proxy, der HTTPS per
+Let's-Encrypt-Zertifikat (automatisiert erneuert über Certbot) terminierte (siehe Kapitel 1). Der
+Proxy wurde gezielt dafür eingesetzt, weil Nextcloud selbst keine automatisiert erneuerbaren,
+vertrauenswürdigen TLS-Zertifikate bereitstellt – TLS-Terminierung am Proxy ist dabei reine
+Transportebene und verändert nicht die Anwendungssicherheit von Nextcloud selbst. Dieses Tutorial
+macht Nextcloud stattdessen ausschließlich im LAN per HTTP erreichbar und richtet keinen Reverse
+Proxy ein. Möchtest du HTTPS-Schutz, musst du selbst einen Reverse Proxy (z. B. Apache, nginx,
+Caddy oder Traefik) mit TLS-Zertifikat vorschalten – die konkrete Einrichtung hängt vom gewählten
+Produkt ab und ist hier bewusst nicht dokumentiert. **Gemessen (Testsystem der Arbeit, mit Reverse
+Proxy):** SSL-Labs-Bewertung **A+** (TLS 1.2/1.3, Perfect Forward Secrecy, kein
+Heartbleed/POODLE/ROBOT) im gehärteten Zustand, gegenüber keiner TLS-Verschlüsselung im
+Ausgangszustand.
 
 ## 2. Zwei-Faktor-Authentifizierung (2FA)
 
@@ -62,14 +66,23 @@ docker exec -u www-data nextcloud-app php occ app:enable twofactor_backupcodes
 
 ## 3. Passwortrichtlinie mit Datenleck-Abgleich
 
-Die mitgelieferte App "Password Policy" erzwingt Mindestlänge/-komplexität und prüft neue
-Passwörter gegen bekannte Datenlecks (Have-I-Been-Pwned-Abgleich):
+Die mitgelieferte App "Password Policy" erzwingt eine Mindestlänge, verbietet gängige/bekannte
+Passwörter und kann neue Passwörter zusätzlich gegen bekannte Datenlecks prüfen
+(Have-I-Been-Pwned-Abgleich). Im Testsystem der Arbeit war die Mindestlänge auf **10 Zeichen**
+gesetzt, häufige Passwörter waren verboten und der HIBP-Abgleich war aktiv; Anforderungen an
+Groß-/Kleinschreibung, Ziffern und Sonderzeichen wurden dagegen **nicht** erzwungen:
 
 ```bash
 docker exec -u www-data nextcloud-app php occ app:enable password_policy
-docker exec -u www-data nextcloud-app php occ config:app:set password_policy minLength --value=12
+docker exec -u www-data nextcloud-app php occ config:app:set password_policy minLength --value=10
 docker exec -u www-data nextcloud-app php occ config:app:set password_policy enforceHaveIBeenPwned --value=1
 ```
+
+> **Hinweis:** Passe `minLength` und die weiteren Optionen in den Admin-Einstellungen
+> (*Einstellungen → Sicherheit*) bzw. per `occ config:app:set password_policy ...` an deine eigenen
+> Anforderungen an. Eine höhere Mindestlänge und zusätzliche Komplexitätsanforderungen
+> (Groß-/Kleinschreibung, Ziffern, Sonderzeichen) erhöhen die Sicherheit weiter, waren im
+> Testsystem der Arbeit aber nicht aktiviert.
 
 ## 4. Automatisierte Updates
 
@@ -133,7 +146,8 @@ System.
 
 **Nicht Teil dieses Tutorials**, da hierfür ein Reverse Proxy nötig ist, den dieses Tutorial
 bewusst nicht einrichtet (siehe Kapitel 1 und Maßnahme 1). Im Testsystem der Arbeit wurden die
-folgenden Header in der vHost-Konfiguration des nativen Apache-Reverse-Proxys gesetzt:
+folgenden Header **in der vHost-Konfiguration des nativen Apache-Reverse-Proxys gesetzt – nicht in
+Nextcloud selbst**:
 
 ```apache
 Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
@@ -214,8 +228,8 @@ docker run --rm --net host --pid host --userns host --cap-add audit_control \
 > **Ehrlicher Hinweis:** Diese Maßnahme wurde im Testsystem der Arbeit **nicht vollständig**
 > umgesetzt (hoher Aufwand bei mittlerer Wirksamkeit, siehe Prioritätstabelle). Docker Bench for
 > Security bewertete das System **vorher** (getestet auf einem Raspberry Pi) mit **5 von möglichen
-> Punkten bei 117 Kontrollpunkten** und **nachher** (getestet auf dem eigentlichen Testhost
-> „hcloud") mit nur noch **3 von 117** – der Score sank also sogar leicht, statt sich zu
+> Punkten bei 117 Kontrollpunkten** und **nachher** (getestet auf dem eigentlichen Testsystem der
+> Arbeit) mit nur noch **3 von 117** – der Score sank also sogar leicht, statt sich zu
 > verbessern. Nextcloud- und Datenbank-Container liefen weiterhin mit Root-Rechten, ohne
 > Ressourcenlimits, mit beschreibbarem Root-Dateisystem und ohne Healthcheck. Wenn du das
 > verbessern willst, sind sinnvolle erste Schritte:

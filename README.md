@@ -13,8 +13,10 @@ Backup-/Restore-Skripten.
 Dieses Tutorial baut die Anwendungsebene des in der Seminararbeit untersuchten Systems nach und
 läuft auf **einem einzigen Host**:
 
-- Minimale, headless betriebene Debian-Installation (laut Systemspezifikation der Arbeit: ein
-  Laptop mit Debian 13 und Docker 29.2.1)
+- Minimale, headless betriebene Debian-Installation (aktueller Stand: Debian GNU/Linux 13
+  „Trixie", Version 13.7, mit Docker 29.8.2; die Messungen in Kapitel 4 der zugrunde liegenden
+  Arbeit wurden auf einem Laptop mit den zum Messzeitpunkt aktuellen Versionen 13.3/29.2.1
+  durchgeführt)
 - Alle Anwendungsdienste als Docker-Container: Nextcloud + MariaDB, optional Home Assistant,
   openHAB, Portainer
 - Zugriff ausschließlich **im LAN**, direkt über den vom jeweiligen Dienst verwendeten Port
@@ -62,8 +64,8 @@ Dieses Tutorial übernimmt an den relevanten Stellen die real in der Arbeit geme
 Vorher-Nachher-Werte (TLS-Bewertung, Security-Header-Note, Docker-Bench-Score, Trivy-Funde,
 Restore-Dauer) des Testsystems der Arbeit, statt pauschal zu behaupten, jede Maßnahme sei perfekt
 umgesetzt. Details und offene Restrisiken (z. B. Container laufen weiterhin mit Root-Rechten und
-der Docker-Bench-Score sank sogar von 5/117 auf 3/117, die LUKS-Verschlüsselung entsperrt
-automatisch beim Boot, kein vollständiges 3-2-1-Backup) stehen in
+der Docker-Bench-Nettowert sank sogar von 5 auf 3 (bei 117 Kontrollpunkten), die
+LUKS-Verschlüsselung entsperrt automatisch beim Boot, kein vollständiges 3-2-1-Backup) stehen in
 [Kapitel 7](docs/07-security-hardening.md).
 
 ## Inhaltsverzeichnis

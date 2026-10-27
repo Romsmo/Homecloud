@@ -18,8 +18,10 @@ HTTPS-Terminierung – siehe dazu den Hinweis im nächsten Abschnitt.
 
 ## Architektur: Ein Host, Docker-Dienste im LAN
 
-Dieses Tutorial läuft auf **einem einzigen Host** (laut Systemspezifikation der zugrunde
-liegenden Arbeit: ein Laptop mit Debian 13 und Docker 29.2.1) – kein zweiter, separater Server.
+Dieses Tutorial läuft auf **einem einzigen Host** (aktueller Stand: Debian GNU/Linux 13 „Trixie",
+Version 13.7, mit Docker 29.8.2; die Messungen in Kapitel 4 der zugrunde liegenden Arbeit wurden
+auf einem Laptop mit den zum Messzeitpunkt aktuellen Versionen 13.3/29.2.1 durchgeführt) – kein
+zweiter, separater Server.
 Dieser eine Host:
 
 - ist eine minimale, headless betriebene Debian-Installation
@@ -79,8 +81,9 @@ Erwartungshaltung hast: TLS-Bewertung A+, Security-Header B→A (dabei blieb der
 Apache-Versions-Header auch nach der Härtung sichtbar) – beide Werte beziehen sich, wie oben
 beschrieben, auf das über den nativen Reverse Proxy von außerhalb des LAN erreichbare Testsystem
 der Arbeit, nicht auf das LAN-interne Setup dieses Tutorials. Unabhängig davon gilt für beide Systeme gleichermaßen:
-Docker-Container laufen weiterhin mit Root-Rechten und ohne Ressourcenlimits (Docker-Bench-Score
-sank sogar von 5/117 auf 3/117), die Verschlüsselung ruhender Daten (LUKS) ist zwar eingerichtet,
+Docker-Container laufen weiterhin mit Root-Rechten und ohne Ressourcenlimits
+(Docker-Bench-Nettowert sank sogar von 5 auf 3, bei 117 Kontrollpunkten), die Verschlüsselung
+ruhender Daten (LUKS) ist zwar eingerichtet,
 aber durch automatische Entsperrung beim Systemstart gegen Diebstahl des laufenden Systems nur
 eingeschränkt wirksam, und das Backup erfüllt im Testsystem nicht die vollständige 3-2-1-Regel
 (keine räumlich getrennte Kopie). Details dazu in [Kapitel 7](07-security-hardening.md).

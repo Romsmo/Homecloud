@@ -16,6 +16,12 @@ lsblk -f
 Notiere dir, welches Gerät das Storage-Laufwerk (`sdb` im Beispiel) und welches das
 Backup-Laufwerk (`sdc` im Beispiel) ist.
 
+> **Willst du die Laufwerke zusätzlich verschlüsseln (LUKS)?** Dann richte die LUKS-Verschlüsselung
+> **jetzt, vor** dem Formatieren in 4.2 ein – nicht erst nachträglich. Die Formatierung erfolgt in
+> diesem Fall direkt auf dem per LUKS geöffneten `/dev/mapper/...`-Gerät, nicht auf der
+> Rohpartition. Siehe [Kapitel 7, Maßnahme 11](07-security-hardening.md#11-verschlüsselung-ruhender-daten-und-der-backups)
+> für die konkreten `cryptsetup`-Befehle, dann hier mit 4.3 fortfahren.
+
 ## 4.2 Formatieren (ext4)
 
 ```bash
@@ -79,6 +85,9 @@ Kapitel 6 (Backup-/Restore-Skripte) exakt so wiederverwendet.
 ## 4.7 Backup-Zielverzeichnis vorbereiten
 
 ```bash
-sudo mkdir -p /mnt/nextcloud-backup/nextcloud-data
+sudo mkdir -p /mnt/nextcloud-backup/nextcloud-data-backup
 sudo chown -R $USER:$USER /mnt/nextcloud-backup
 ```
+
+Dieser Pfad (`/mnt/nextcloud-backup/nextcloud-data-backup`) wird in
+[Kapitel 6 (Backup & Restore)](06-backup-restore.md) exakt so wiederverwendet.

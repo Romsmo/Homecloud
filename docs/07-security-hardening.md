@@ -103,16 +103,16 @@ docker compose up -d
 docker exec -u www-data nextcloud-app php occ upgrade
 ```
 
-**Gemessen:** Die Arbeit vergleicht qualitativ (Abbildung 7) ein älteres gegen ein aktuelleres
-Nextcloud-Image und zeigt den Effekt des Update-Alters deutlich, ohne für das ältere Image eine
-exakte Schwachstellenzahl zu nennen. Konkret gemessen und beziffert wurde nur der aktuelle Stand
-(siehe Maßnahme 9: 289 Schwachstellen mit hohem/kritischem Schweregrad). Ein zusätzliches,
-konkretes Beispiel aus der Arbeit (am dortigen, per Apache-Reverse-Proxy terminierten
-Testsystem): Nach einem Image-Update stieg die im Response-Header offengelegte Apache-Version
-von 2.4.65 auf 2.4.68 – der Header blieb dabei weiterhin sichtbar (siehe Maßnahme 7).
-Kontinuierliches Update-Management ist damit keine Formsache, sondern eine der wirksamsten
-Einzelmaßnahmen, auch wenn sich der exakte quantitative Effekt hier nicht pauschal beziffern
-lässt.
+**Gemessen:** Die Arbeit vergleicht in Abbildung 6 ein älteres gegen ein aktuelleres
+Nextcloud-Image per Trivy-Scan: Das ältere Image wies **1.310 HIGH + 77 CRITICAL = 1.387**
+Schwachstellen auf, das zum Messzeitpunkt aktuelle Image nur noch **285 HIGH + 4 CRITICAL = 289**
+(siehe auch Maßnahme 9). Ein zusätzliches, konkretes Beispiel aus der Arbeit (am dortigen, per
+Apache-Reverse-Proxy terminierten Testsystem): Nach einem Image-Update stieg die im
+Response-Header offengelegte Apache-Version von 2.4.65 auf 2.4.68 – der Header blieb dabei
+weiterhin sichtbar (siehe Maßnahme 7). Kontinuierliches Update-Management ist damit keine
+Formsache, sondern eine der wirksamsten Einzelmaßnahmen: allein der Versionsunterschied zwischen
+den beiden gemessenen Images bedeutet einen Unterschied von rund 1.100 Schwachstellen mit
+hohem/kritischem Schweregrad.
 
 ## 5. Getestetes Backup
 
@@ -163,11 +163,19 @@ Setzt du selbst einen Reverse Proxy vor dieses Tutorial-Setup, ergänze die ents
 Header-Direktiven dort (bei Apache wie oben, bei nginx z. B. über `add_header ... always;`,
 bei Caddy/Traefik über die jeweilige Header-Middleware).
 
+> **Wichtig – scheinbarer Widerspruch, real gemessen:** Die `Permissions-Policy`-Direktive oben
+> **war** in der realen vHost-Konfiguration des Testsystems genauso gesetzt wie hier gezeigt – und
+> der Header kam trotzdem messbar nicht beim Client an. Das ist kein Dokumentationsfehler, sondern
+> exakt der in der Arbeit gemessene Befund: eine gesetzte Direktive garantiert nicht automatisch,
+> dass der Header tatsächlich ausgeliefert wird (z. B. wegen Modul-Reihenfolge, Caching oder
+> Overrides durch die Anwendung). Die Direktive bleibt hier trotzdem als Teil der realen,
+> gemessenen Konfiguration abgebildet.
+
 **Gemessen (Testsystem der Arbeit, mit Reverse Proxy):** securityheaders.com bewertete den
 Ausgangszustand mit **B** und den gehärteten Zustand mit **A**. Auch nach der Härtung fehlte in
-der Arbeit weiterhin ausschließlich der Permissions-Policy-Header vollständig –
-realistischerweise bekommst du nicht ohne Weiteres eine perfekte Bewertung, und das ist kein
-Zeichen eines gescheiterten Setups.
+der Arbeit weiterhin ausschließlich der Permissions-Policy-Header vollständig – trotz gesetzter
+Direktive (siehe Hinweis oben). Realistischerweise bekommst du nicht ohne Weiteres eine perfekte
+Bewertung, und das ist kein Zeichen eines gescheiterten Setups.
 
 > **Hinweis aus der Arbeit:** Nach einem Image-Update verschwand ein zuvor entfernter
 > `X-Powered-By`-Header wieder, weil die Einstellung nicht dauerhaft außerhalb des Images
@@ -210,12 +218,14 @@ Für Container-Images zusätzlich Trivy einsetzen:
 trivy image nextcloud:latest
 ```
 
-**Gemessen:** Trivy fand am Testsystem 289 Schwachstellen mit hohem/kritischem Schweregrad über
-die eingesetzten Images (285 HIGH, 4 CRITICAL) – überwiegend in mitgelieferten
-Betriebssystempaketen, nicht in der Anwendungslogik selbst. Ein separater Wert "nach" weiteren
-Maßnahmen wurde in der Arbeit nicht gemessen; der qualitative Alters-Effekt (älteres vs.
-aktuelleres Image) ist stattdessen über Abbildung 7 dokumentiert (siehe Maßnahme 4). Das relativiert
-sich zwar durch Maßnahme 4 (Update-Management), verschwindet aber nicht vollständig.
+**Gemessen:** Trivy fand am **zum Messzeitpunkt aktuellen** Nextcloud-Image 289 Schwachstellen mit
+hohem/kritischem Schweregrad (285 HIGH, 4 CRITICAL) – überwiegend in mitgelieferten
+Betriebssystempaketen, nicht in der Anwendungslogik selbst. Dieser Wert bezieht sich auf das
+jeweils aktuelle Image, nicht auf die Summe über alle in diesem Setup eingesetzten Images. Ein
+separater Wert "nach" weiteren Maßnahmen wurde in der Arbeit nicht gemessen; der quantitative
+Alters-Effekt (älteres vs. aktuelleres Image: 1.387 vs. 289 Schwachstellen) ist stattdessen über
+Abbildung 6 dokumentiert (siehe Maßnahme 4). Das relativiert sich zwar durch Maßnahme 4
+(Update-Management), verschwindet aber nicht vollständig.
 
 ## 10. Container-/Serverhärtung nach CIS-Benchmark
 
@@ -227,12 +237,12 @@ docker run --rm --net host --pid host --userns host --cap-add audit_control \
 
 > **Ehrlicher Hinweis:** Diese Maßnahme wurde im Testsystem der Arbeit **nicht vollständig**
 > umgesetzt (hoher Aufwand bei mittlerer Wirksamkeit, siehe Prioritätstabelle). Docker Bench for
-> Security bewertete das System **vorher** (getestet auf einem Raspberry Pi) mit **5 von möglichen
-> Punkten bei 117 Kontrollpunkten** und **nachher** (getestet auf dem eigentlichen Testsystem der
-> Arbeit) mit nur noch **3 von 117** – der Score sank also sogar leicht, statt sich zu
-> verbessern. Nextcloud- und Datenbank-Container liefen weiterhin mit Root-Rechten, ohne
-> Ressourcenlimits, mit beschreibbarem Root-Dateisystem und ohne Healthcheck. Wenn du das
-> verbessern willst, sind sinnvolle erste Schritte:
+> Security v1.6.0 weist 117 Prüfpunkte aus. Gemessen auf dem Testsystem (Laptop) der Arbeit ergab
+> sich **vorher** ein Score von **5 (Netto)** und **nachher** nur noch **3 (Netto)** – der
+> Nettowert (bestandene abzüglich nicht bestandener, sicherheitsrelevanter Kontrollpunkte) sank
+> also sogar leicht, statt sich zu verbessern. Nextcloud- und Datenbank-Container liefen weiterhin
+> mit Root-Rechten, ohne Ressourcenlimits, mit beschreibbarem Root-Dateisystem und ohne
+> Healthcheck. Wenn du das verbessern willst, sind sinnvolle erste Schritte:
 >
 > - Ressourcenlimits setzen (`deploy.resources.limits` in der Compose-Datei, bzw. `mem_limit`/
 >   `cpus` bei Compose v2 ohne Swarm)
@@ -256,6 +266,12 @@ Testsystem auch tatsächlich **umgesetzt**: Storage- und Backup-Laufwerk waren p
 > wirksam ist es nur gegen den Diebstahl eines **ausgeschalteten** Datenträgers oder Geräts. Wäge
 > für dein eigenes System ab, ob dir automatischer Neustart ohne manuelle Eingabe wichtiger ist als
 > Schutz auch im eingeschalteten Zustand.
+
+> **Reihenfolge beachten:** Richte LUKS **vor** Schritt 4.2 (Formatieren) in
+> [Kapitel 4](04-storage-setup.md#42-formatieren-ext4) ein, nicht danach – in diesem Tutorial sind
+> die Laufwerke in Kapitel 4 bereits regulär (unverschlüsselt) formatiert. Willst du LUKS
+> einsetzen, wiederhole Kapitel 4 ab 4.2 auf Basis des hier geöffneten
+> `/dev/mapper/...`-Geräts statt der Rohpartition.
 
 So richtest du LUKS auf dem Storage- bzw. Backup-Laufwerk ein, bevor du es mountest und mit Daten
 befüllst (⚠️ verschlüsselt/formatiert das gesamte Zielgerät):

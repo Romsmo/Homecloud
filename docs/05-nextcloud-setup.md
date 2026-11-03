@@ -53,8 +53,8 @@ exit
 exit
 ```
 
-> Setzt du später selbst einen eigenen Reverse Proxy mit eigener Domain davor (nicht Teil dieses
-> Tutorials, siehe Kapitel 1), ergänzt du diese Domain zusätzlich über einen weiteren
+> Richtest du später den optionalen Reverse Proxy mit eigener Domain davor ein (Kapitel 7,
+> Maßnahme 1), ergänzt du diese Domain zusätzlich über einen weiteren
 > `trusted_domains`-Index (`trusted_domains 2`, `3`, …), statt die LAN-IP zu ersetzen.
 
 ## 5.6 Integritätsprüfung

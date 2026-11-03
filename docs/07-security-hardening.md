@@ -6,8 +6,8 @@ in Kapitel 5.2 aus dem Verhältnis von Schutzwirkung zu Aufwand ableitet. Zu jed
 soweit verfügbar, die **real am Testsystem gemessenen Vorher-/Nachher-Werte** aus Kapitel 4
 angegeben – als realistischer Maßstab, nicht als Garantie, dass dein eigenes System exakt
 dieselben Werte erreicht. Maßnahme 1 und 7 beziehen sich dabei, wie dort vermerkt, auf die
-HTTPS-/Reverse-Proxy-Schicht des Testsystems der Arbeit, die **nicht** Teil dieses Tutorials ist
-(siehe Kapitel 1).
+optionale HTTPS-/Reverse-Proxy-Schicht des Testsystems der Arbeit (Beispielkonfiguration in
+Maßnahme 1; siehe auch Kapitel 1).
 
 | # | Maßnahme | Schutzziel | Wirksamkeit | Aufwand |
 |---|---|---|---|---|
@@ -32,19 +32,103 @@ entsprechend sortiert.
 
 ## 1. HTTPS/TLS
 
-**Nicht Teil dieses Tutorials.** Im Testsystem der zugrunde liegenden Arbeit lief auf demselben
-Host zusätzlich **nativ** (nicht als separater Server) ein Apache-Reverse-Proxy, der HTTPS per
-Let's-Encrypt-Zertifikat (automatisiert erneuert über Certbot) terminierte (siehe Kapitel 1). Der
-Proxy wurde gezielt dafür eingesetzt, weil Nextcloud selbst keine automatisiert erneuerbaren,
+**Optional – im Testsystem der Arbeit eingesetzt und für den Zugriff von außerhalb des LAN
+erforderlich.** Das Basissystem aus den Kapiteln 3–6 ist nur im LAN per HTTP erreichbar. Im
+Testsystem der zugrunde liegenden Arbeit lief auf demselben Host zusätzlich **nativ** (nicht als
+separater Server) ein Apache-Reverse-Proxy, der HTTPS per Let's-Encrypt-Zertifikat (automatisiert
+erneuert über Certbot) terminierte (siehe Kapitel 1). Der Proxy wurde gezielt dafür eingesetzt,
+weil das eingesetzte Nextcloud-Container-Image selbst keine automatisiert erneuerbaren,
 vertrauenswürdigen TLS-Zertifikate bereitstellt – TLS-Terminierung am Proxy ist dabei reine
-Transportebene und verändert nicht die Anwendungssicherheit von Nextcloud selbst. Dieses Tutorial
-macht Nextcloud stattdessen ausschließlich im LAN per HTTP erreichbar und richtet keinen Reverse
-Proxy ein. Möchtest du HTTPS-Schutz, musst du selbst einen Reverse Proxy (z. B. Apache, nginx,
-Caddy oder Traefik) mit TLS-Zertifikat vorschalten – die konkrete Einrichtung hängt vom gewählten
-Produkt ab und ist hier bewusst nicht dokumentiert. **Gemessen (Testsystem der Arbeit, mit Reverse
+Transportebene und verändert nicht die Anwendungssicherheit von Nextcloud selbst. Die folgenden
+Schritte bilden diese Schicht als **Beispielkonfiguration** nach; Domain, IP-Adressen und Pfade
+sind Platzhalter und an dein System anzupassen. **Gemessen (Testsystem der Arbeit, mit Reverse
 Proxy):** SSL-Labs-Bewertung **A+** (TLS 1.2/1.3, Perfect Forward Secrecy, kein
 Heartbleed/POODLE/ROBOT) im gehärteten Zustand, gegenüber keiner TLS-Verschlüsselung im
 Ausgangszustand.
+
+**Voraussetzungen:** eine Domain (`<DOMAIN>`, z. B. `cloud.example.org`) mit DNS-A-Record auf deine
+öffentliche IP, im Router eine Portweiterleitung von 80/tcp und 443/tcp auf den Host (Port 80
+wird für die Zertifikatsausstellung benötigt) sowie – falls du die Firewall aus Maßnahme 6
+nutzt – freigegebene Ports 80/tcp und 443/tcp. Setze diesen Schritt erst um, wenn 2FA
+(Maßnahme 2), Passwortrichtlinie (Maßnahme 3) und Brute-Force-Schutz (Maßnahme 8) aktiv sind,
+weil der Dienst danach aus dem Internet erreichbar ist.
+
+**Schritt 1 – Apache und Certbot installieren und die benötigten Module aktivieren:**
+
+```bash
+sudo apt update
+sudo apt install -y apache2 certbot python3-certbot-apache
+sudo a2enmod proxy proxy_http headers rewrite ssl
+```
+
+**Schritt 2 – einen einfachen HTTP-vHost anlegen** (`/etc/apache2/sites-available/nextcloud.conf`),
+damit Certbot die Domain validieren kann, und aktivieren:
+
+```apache
+<VirtualHost *:80>
+    ServerName <DOMAIN>
+</VirtualHost>
+```
+
+```bash
+sudo a2ensite nextcloud && sudo systemctl reload apache2
+```
+
+**Schritt 3 – Zertifikat ausstellen.** Certbot richtet die automatische Erneuerung selbst ein
+(systemd-Timer); mit dem Dry-Run prüfst du sie:
+
+```bash
+sudo certbot certonly --apache -d <DOMAIN>
+sudo certbot renew --dry-run
+```
+
+**Schritt 4 – den vHost durch die endgültige Fassung ersetzen** (HTTP leitet auf HTTPS um, HTTPS
+reicht intern an den Nextcloud-Container auf Port 8080 weiter; die Header aus Maßnahme 7 kommen in
+den 443-Block):
+
+```apache
+<VirtualHost *:80>
+    ServerName <DOMAIN>
+    RewriteEngine On
+    RewriteRule ^ https://%{SERVER_NAME}%{REQUEST_URI} [END,NE,R=permanent]
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName <DOMAIN>
+    SSLEngine On
+    SSLCertificateFile /etc/letsencrypt/live/<DOMAIN>/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/<DOMAIN>/privkey.pem
+    SSLProtocol -all +TLSv1.2 +TLSv1.3
+    ProxyPreserveHost On
+    RequestHeader set X-Forwarded-Proto "https"
+    ProxyPass / http://127.0.0.1:8080/
+    ProxyPassReverse / http://127.0.0.1:8080/
+    # Security-Header: siehe Maßnahme 7
+</VirtualHost>
+```
+
+```bash
+sudo apache2ctl configtest && sudo systemctl reload apache2
+```
+
+**Schritt 5 – Nextcloud mitteilen, dass es hinter einem Reverse Proxy läuft** (die Domain
+zusätzlich zur LAN-IP in `trusted_domains`, siehe 5.5). `<PROXY-IP>` ist die Adresse, mit der der
+Proxy aus Sicht des Containers ankommt; bei Docker ist das meist das Gateway des Bridge-Netzes
+(z. B. `172.18.0.1`, prüfbar mit `docker network inspect`):
+
+```bash
+docker exec -u www-data nextcloud-app php occ config:system:set trusted_domains 2 --value=<DOMAIN>
+docker exec -u www-data nextcloud-app php occ config:system:set trusted_proxies 0 --value=<PROXY-IP>
+docker exec -u www-data nextcloud-app php occ config:system:set forwarded_for_headers 0 --value=HTTP_X_FORWARDED_FOR
+docker exec -u www-data nextcloud-app php occ config:system:set overwriteprotocol --value=https
+docker exec -u www-data nextcloud-app php occ config:system:set overwrite.cli.url --value=https://<DOMAIN>
+```
+
+**Schritt 6 – prüfen:** Aufruf von `https://<DOMAIN>` im Browser, die Weiterleitung von HTTP auf HTTPS
+(`curl -I http://<DOMAIN>`) und anschließend die TLS-Bewertung bei SSL Labs sowie die Header-Bewertung
+bei securityheaders.com, wie in der Arbeit gemessen. Die Trusted-Proxy-Einstellungen wurden in der
+Arbeit für die Brute-Force-Drosselung gesetzt (die IP des Angreifers statt die des Proxys soll
+erfasst werden); ihre Wirkung wurde dort nicht gesondert getestet.
 
 ## 2. Zwei-Faktor-Authentifizierung (2FA)
 
@@ -69,8 +153,9 @@ docker exec -u www-data nextcloud-app php occ app:enable twofactor_backupcodes
 Die mitgelieferte App "Password Policy" erzwingt eine Mindestlänge, verbietet gängige/bekannte
 Passwörter und kann neue Passwörter zusätzlich gegen bekannte Datenlecks prüfen
 (Have-I-Been-Pwned-Abgleich). Im Testsystem der Arbeit war die Mindestlänge auf **10 Zeichen**
-gesetzt, häufige Passwörter waren verboten und der HIBP-Abgleich war aktiv; Anforderungen an
-Groß-/Kleinschreibung, Ziffern und Sonderzeichen wurden dagegen **nicht** erzwungen:
+gesetzt, häufige Passwörter waren verboten und der HIBP-Abgleich war aktiv; zusätzlich waren
+Anforderungen an Groß-/Kleinschreibung, Ziffern und Sonderzeichen aktiviert (in den
+Admin-Einstellungen; die folgenden `occ`-Befehle setzen nur Mindestlänge und HIBP-Abgleich):
 
 ```bash
 docker exec -u www-data nextcloud-app php occ app:enable password_policy
@@ -80,9 +165,9 @@ docker exec -u www-data nextcloud-app php occ config:app:set password_policy enf
 
 > **Hinweis:** Passe `minLength` und die weiteren Optionen in den Admin-Einstellungen
 > (*Einstellungen → Sicherheit*) bzw. per `occ config:app:set password_policy ...` an deine eigenen
-> Anforderungen an. Eine höhere Mindestlänge und zusätzliche Komplexitätsanforderungen
-> (Groß-/Kleinschreibung, Ziffern, Sonderzeichen) erhöhen die Sicherheit weiter, waren im
-> Testsystem der Arbeit aber nicht aktiviert.
+> Anforderungen an. Eine höhere Mindestlänge erhöht die Sicherheit weiter und war im Testsystem der
+> Arbeit nicht gesetzt (Mindestlänge 10); die Komplexitätsanforderungen (Groß-/Kleinschreibung,
+> Ziffern, Sonderzeichen) waren dort aktiviert.
 
 ## 4. Automatisierte Updates
 
@@ -132,21 +217,21 @@ sudo bash scripts/firewall-setup.sh
 ```
 
 Passe `LAN_SUBNET` und `SSH_PORT` im Skript vor der Ausführung an deine Umgebung an. Das Skript
-lässt eingehenden Zugriff auf den Nextcloud-Port (8080) bewusst nur aus dem LAN zu – dieses
-Tutorial exponiert, anders als das Testsystem der Arbeit, keinen Port öffentlich ins Internet
-(kein Port 80/443, da kein Reverse Proxy eingerichtet wird, siehe Kapitel 1). **Gemessen (am
+lässt eingehenden Zugriff auf den Nextcloud-Port (8080) bewusst nur aus dem LAN zu – das
+Basissystem dieses Tutorials exponiert, anders als das Testsystem der Arbeit, keinen Port
+öffentlich ins Internet; erst mit dem optionalen Reverse Proxy (Maßnahme 1) kommen 80/tcp und
+443/tcp hinzu, die du dann in der Firewall und im Router freigibst. **Gemessen (am
 öffentlich per Reverse Proxy erreichbaren Testsystem der Arbeit):** Ein externer Portscan
 (`nmap -p- --min-rate 2000`) fand im gehärteten Zustand genau zwei dem System zuzuordnende offene
 Ports: 80/TCP und 443/TCP (gegenüber nur 80/TCP, unverschlüsselt, im Ausgangszustand). Das zeigt:
 Portreduktion bedeutet dort vor allem "nur HTTP(S) nach außen", nicht "möglichst viele Ports
-schließen" – sobald du selbst einen Reverse Proxy ergänzt, gilt dieselbe Überlegung auch für dein
+schließen" – sobald du den Reverse Proxy ergänzt, gilt dieselbe Überlegung auch für dein
 System.
 
 ## 7. Sicherheitsrelevante HTTP-Header
 
-**Nicht Teil dieses Tutorials**, da hierfür ein Reverse Proxy nötig ist, den dieses Tutorial
-bewusst nicht einrichtet (siehe Kapitel 1 und Maßnahme 1). Im Testsystem der Arbeit wurden die
-folgenden Header **in der vHost-Konfiguration des nativen Apache-Reverse-Proxys gesetzt – nicht in
+Diese Header setzt der optionale Reverse Proxy aus Maßnahme 1; ohne Proxy entfällt diese
+Maßnahme im LAN-Basissystem. Im Testsystem der Arbeit wurden die folgenden Header **in der vHost-Konfiguration des nativen Apache-Reverse-Proxys gesetzt – nicht in
 Nextcloud selbst**:
 
 ```apache
@@ -155,12 +240,10 @@ Header always set X-Content-Type-Options "nosniff"
 Header always set X-Frame-Options "SAMEORIGIN"
 Header always set Referrer-Policy "no-referrer"
 Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
-ServerTokens Prod
-ServerSignature Off
 ```
 
-Setzt du selbst einen Reverse Proxy vor dieses Tutorial-Setup, ergänze die entsprechenden
-Header-Direktiven dort (bei Apache wie oben, bei nginx z. B. über `add_header ... always;`,
+Trage die Direktiven in den 443-Block des vHosts aus Maßnahme 1 ein, lade Apache neu und prüfe
+sie mit `curl -I https://<DOMAIN>` (bei Apache wie oben, bei nginx z. B. über `add_header ... always;`,
 bei Caddy/Traefik über die jeweilige Header-Middleware).
 
 > **Wichtig – scheinbarer Widerspruch, real gemessen:** Die `Permissions-Policy`-Direktive oben
@@ -183,10 +266,11 @@ Bewertung, und das ist kein Zeichen eines gescheiterten Setups.
 > oder securityheaders.com).
 >
 > **Zweiter, eigenständiger Befund:** Unabhängig davon blieb der **Apache-Versions-Header**
-> (`Server: Apache/2.4.x`) sowohl vor als auch nach der Härtung sichtbar, trotz `ServerTokens
-> Prod`/`ServerSignature Off` – nach einem Image-Update zeigte er sogar die neue Versionsnummer
-> (2.4.65 → 2.4.68) an, statt verschwunden zu bleiben. Plane diesen Header als bekannte,
-> nicht vollständig behobene Einschränkung ein, getrennt vom `X-Powered-By`-Problem oben.
+> (`Server: Apache/2.4.x`) sowohl vor als auch nach der Härtung sichtbar: `ServerTokens` und
+> `ServerSignature` wurden bewusst auf dem Apache-Standard belassen, weil der Header als
+> unwesentlich eingestuft wurde. Nach einem Image-Update zeigte er die neue Versionsnummer
+> (2.4.65 → 2.4.68) an. Plane diesen Header als bekannte, bewusst nicht behobene Einschränkung
+> ein, getrennt vom `X-Powered-By`-Problem oben.
 
 ## 8. Brute-Force-Schutz
 
@@ -239,8 +323,9 @@ docker run --rm --net host --pid host --userns host --cap-add audit_control \
 > umgesetzt (hoher Aufwand bei mittlerer Wirksamkeit, siehe Prioritätstabelle). Docker Bench for
 > Security v1.6.0 weist 117 Prüfpunkte aus. Gemessen auf dem Testsystem (Laptop) der Arbeit ergab
 > sich **vorher** ein Score von **5 (Netto)** und **nachher** nur noch **3 (Netto)** – der
-> Nettowert (bestandene abzüglich nicht bestandener, sicherheitsrelevanter Kontrollpunkte) sank
-> also sogar leicht, statt sich zu verbessern. Nextcloud- und Datenbank-Container liefen weiterhin
+> Nettowert (bestandene abzüglich nicht bestandener, sicherheitsrelevanter Kontrollpunkte)
+> änderte sich also leicht; wegen des geteilten Hosts ist das kein belastbares Maß für die
+> Container-Härtung (vgl. Tabelle 4 der Arbeit). Nextcloud- und Datenbank-Container liefen weiterhin
 > mit Root-Rechten, ohne Ressourcenlimits, mit beschreibbarem Root-Dateisystem und ohne
 > Healthcheck. Wenn du das verbessern willst, sind sinnvolle erste Schritte:
 >
@@ -318,11 +403,11 @@ Netzsegment direkt am Internet-Router (Router 1); das übrige Heimnetz hängt an
 Router (Router 2) mit eigener Firewall. Der gesamte Datenverkehr zwischen Server und Heimnetz
 läuft dann ausschließlich über Router 1 und dessen Firewall.
 
-**Gemessen:** Im Testsystem der Arbeit war diese Isolation bereits beim Ausgangstest wirksam –
-weder der trennende Router noch ein PC im Heimnetz waren vom Server aus erreichbar, alle
-geprüften Ports (inkl. Port 445/SMB) wurden von der Firewall verworfen. Ein zusätzlicher
-Fix-Schritt war nicht nötig. Das zeigt: diese Maßnahme lohnt sich vor allem beim **Netzwerk-Design
-im Vorfeld** (zwei Router statt einem gemeinsamen Netz), nicht bei einer nachträglichen
+**Gemessen:** Im Testsystem der Arbeit waren im Ausgangszustand alle Geräte im Netzwerk erreichbar
+(Rohdaten aus Datenschutzgründen nicht aufbewahrt); nach der Absicherung waren weder der
+trennende Router noch ein PC im Heimnetz vom Server aus erreichbar, alle geprüften Ports
+(inkl. Port 445/SMB) wurden von der Firewall verworfen. Das zeigt: diese Maßnahme lohnt sich vor
+allem beim **Netzwerk-Design im Vorfeld** (zwei Router statt einem gemeinsamen Netz), nicht bei einer nachträglichen
 Software-Konfiguration auf dem Server selbst.
 
 Prüfe die Wirksamkeit deiner eigenen Segmentierung bei Bedarf nicht-destruktiv per `ping`/`nmap`

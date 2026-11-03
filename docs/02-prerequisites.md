@@ -16,8 +16,9 @@
 
 ## Netzwerk
 
-- Dieses Tutorial macht die Dienste ausschließlich **im LAN** erreichbar – es ist keine
-  Portweiterleitung am Router und keine öffentliche Domain nötig
+- Das Basissystem dieses Tutorials ist ausschließlich **im LAN** erreichbar – dafür ist keine
+  Portweiterleitung am Router und keine öffentliche Domain nötig (beides nur für den optionalen
+  Reverse Proxy, Kapitel 7, Maßnahme 1)
 - Empfehlung: der Host bekommt eine feste (statische) IP im LAN, z. B. per DHCP-Reservierung im
   Router – das hält `trusted_domains` (Kapitel 5.5) und die Firewall-Regeln (Kapitel 7) stabil
 - Empfohlene Netzarchitektur (siehe Kapitel 7.13): der Host hängt in einem eigenen Netzsegment
@@ -27,7 +28,7 @@
 - Möchtest du zusätzlich von außerhalb des LAN per HTTPS zugreifen (wie im Testsystem der
   zugrunde liegenden Arbeit), benötigst du dafür einen eigenen Reverse Proxy mit
   TLS-Zertifikat sowie eine Domain mit DNS-A-Record und eine Portweiterleitung für 80/443 –
-  das ist bewusst **nicht** Teil dieses Tutorials (siehe Kapitel 1)
+  die Einrichtung ist optional in Kapitel 7, Maßnahme 1 beschrieben
 
 ## Namenskonventionen in diesem Tutorial (Platzhalter)
 
@@ -37,6 +38,8 @@
 | `admin` / `CHANGE_ME_STRONG_PASSWORD` | Nextcloud-Admin-Zugangsdaten | durch echte, starke Werte ersetzen |
 | `/mnt/nextcloud-data` | Mountpoint Storage-Laufwerk | siehe Kapitel 4 |
 | `/mnt/nextcloud-backup` | Mountpoint Backup-Laufwerk | siehe Kapitel 4 |
+| `<DOMAIN>` | Domain deines Servers (nur für den optionalen Reverse Proxy, Kapitel 7, Maßnahme 1) | z. B. `cloud.example.org`; DNS-A-Record auf deine öffentliche IP |
+| `<PROXY-IP>` | Adresse des Reverse Proxys aus Sicht des Nextcloud-Containers (`trusted_proxies`) | meist das Gateway des Docker-Bridge-Netzes, z. B. `172.18.0.1` |
 
 Ersetze diese Platzhalter konsequent in allen Befehlen und Konfigurationsdateien durch deine eigenen
 Werte.

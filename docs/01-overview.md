@@ -19,8 +19,7 @@ Maßnahme 1 beschrieben – siehe auch den Hinweis im nächsten Abschnitt.
 ## Architektur: Ein Host, Docker-Dienste im LAN
 
 Dieses Tutorial läuft auf **einem einzigen Host** (Stand 27.10.2026: Debian GNU/Linux 13 „Trixie",
-Version 13.7, mit Docker 29.8.2; die Messungen in Kapitel 4 der zugrunde liegenden Arbeit wurden
-auf einem Laptop mit den zum Messzeitpunkt installierten Versionen 13.3/29.2.1 durchgeführt) – kein
+Version 13.7, mit Docker 29.8.2) – kein
 zweiter, separater Server.
 Dieser eine Host:
 

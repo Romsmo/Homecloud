@@ -14,9 +14,7 @@ Dieses Tutorial baut die Anwendungsebene des in der Seminararbeit untersuchten S
 läuft auf **einem einzigen Host**:
 
 - Minimale, headless betriebene Debian-Installation (Stand 27.10.2026: Debian GNU/Linux 13
-  „Trixie", Version 13.7, mit Docker 29.8.2; die Messungen in Kapitel 4 der zugrunde liegenden
-  Arbeit wurden auf einem Laptop mit den zum Messzeitpunkt installierten Versionen 13.3/29.2.1
-  durchgeführt)
+  „Trixie", Version 13.7, mit Docker 29.8.2)
 - Alle Anwendungsdienste als Docker-Container: Nextcloud + MariaDB, optional Home Assistant,
   openHAB, Portainer
 - Zugriff im **LAN** direkt über den vom jeweiligen Dienst verwendeten Port
